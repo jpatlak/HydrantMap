@@ -1,524 +1,747 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>❄️ EG Hydrant Rescue</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:        #07090f;
-  --panel:     #0e1420;
-  --border:    #1c2535;
-  --accent:    #3b82f6;
-  --red:       #f43f5e;
-  --green:     #10b981;
-  --gray:      #475569;
-  --text:      #e2e8f0;
-  --muted:     #64748b;
-  --header-h: 60px;
+  --red:     #e11d48;
+  --green:   #059669;
+  --blue:    #2563eb;
+  --amber:   #d97706;
+  --gray:    #94a3b8;
+  --bg:      #f8fafc;
+  --panel:   #ffffff;
+  --border:  #e2e8f0;
+  --text:    #0f172a;
+  --muted:   #64748b;
+  --shadow:  0 2px 12px rgba(0,0,0,0.10);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.14);
+  --header-h: 58px;
+  --r: 10px;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+- { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 body {
-  font-family: 'Syne', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  overflow: hidden;
-  height: 100dvh;
+font-family: ‘DM Sans’, sans-serif;
+background: var(–bg);
+color: var(–text);
+overflow: hidden;
+height: 100dvh;
 }
 
-/* ─── HEADER ─── */
+/* ── HEADER ── */
 #header {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-  height: var(--header-h);
-  background: rgba(7,9,15,0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; padding: 0 14px; gap: 10px;
+position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+height: var(–header-h);
+background: var(–panel);
+border-bottom: 1px solid var(–border);
+box-shadow: var(–shadow);
+display: flex; align-items: center; padding: 0 12px; gap: 8px;
 }
-
-#header-logo { font-size: 1.4rem; flex-shrink: 0; }
-
-#header-title {
-  flex: 1; min-width: 0;
-}
+#header-icon { font-size: 1.3rem; flex-shrink: 0; }
+#header-title { flex: 1; min-width: 0; }
 #header-title h1 {
-  font-size: 0.88rem; font-weight: 800; letter-spacing: -0.01em; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+font-size: 0.88rem; font-weight: 700; color: var(–text);
+white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 #header-title p {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem; color: var(--muted); letter-spacing: 0.04em;
+font-family: ‘DM Mono’, monospace; font-size: 0.6rem;
+color: var(–muted); letter-spacing: 0.05em; text-transform: uppercase;
 }
-
-#stats-bar {
-  display: flex; gap: 6px; flex-shrink: 0;
-}
+#stats-bar { display: flex; gap: 5px; flex-shrink: 0; }
 .stat {
-  display: flex; align-items: center; gap: 4px;
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 6px; padding: 3px 8px;
-  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 600;
+display: flex; align-items: center; gap: 4px;
+background: var(–bg); border: 1.5px solid var(–border);
+border-radius: 20px; padding: 3px 9px;
+font-family: ‘DM Mono’, monospace; font-size: 0.72rem; font-weight: 500;
+white-space: nowrap;
 }
-.stat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.sdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 
-/* ─── MAP ─── */
+/* ── MAP ── */
 #map {
-  position: fixed;
-  top: var(--header-h);
-  bottom: 0; left: 0; right: 0;
+position: fixed;
+top: var(–header-h); bottom: 0; left: 0; right: 0;
 }
 
-/* ─── LOADING ─── */
+/* ── LOADING ── */
 #loading {
-  position: fixed; top: var(--header-h); left: 0; right: 0; bottom: 0;
-  background: var(--bg); z-index: 900;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+position: fixed; top: var(–header-h); inset: 0;
+background: var(–bg); z-index: 900;
+display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
 }
-.snowflake-spin {
-  font-size: 2.5rem;
-  animation: snow-spin 2s linear infinite;
-}
-@keyframes snow-spin { to { transform: rotate(360deg); } }
-#loading-msg { color: var(--muted); font-size: 0.85rem; font-family: 'JetBrains Mono', monospace; }
+.spin { font-size: 2.2rem; animation: spin 2.5s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading p { color: var(–muted); font-size: 0.82rem; font-family: ‘DM Mono’, monospace; }
 
-/* ─── BANNER (hosting warning / demo mode) ─── */
-#banner {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
-  background: linear-gradient(90deg, #7c2d12, #9a3412);
-  border-top: 1px solid #c2410c;
-  padding: 8px 14px;
-  font-size: 0.75rem; line-height: 1.5;
-  display: none;
+/* ── CONTROLS (bottom right) ── */
+#controls {
+position: fixed; bottom: 16px; right: 12px; z-index: 800;
+display: none; flex-direction: column; gap: 8px; align-items: flex-end;
 }
-#banner strong { color: #fed7aa; }
-#banner a { color: #fb923c; }
-#banner-close {
-  float: right; background: none; border: none; color: #fdba74; font-size: 1rem;
-  cursor: pointer; padding: 0 0 0 8px; line-height: 1;
+.ctrl-btn {
+display: flex; align-items: center; gap: 6px;
+background: var(–panel); border: 1.5px solid var(–border);
+border-radius: 24px; padding: 8px 13px;
+font-size: 0.78rem; font-weight: 600; color: var(–text);
+cursor: pointer; box-shadow: var(–shadow);
+transition: transform 0.15s, box-shadow 0.15s;
+white-space: nowrap;
 }
+.ctrl-btn:active { transform: scale(0.96); }
+#gps-btn.active { background: #eff6ff; border-color: #93c5fd; color: var(–blue); }
+#add-btn { background: var(–blue); border-color: var(–blue); color: #fff; }
+#add-btn.cancel { background: var(–red); border-color: var(–red); }
+#log-btn { background: var(–panel); }
 
-/* ─── LIVE PULSE ─── */
-#live-dot {
-  position: fixed; top: calc(var(--header-h) + 10px); right: 10px; z-index: 800;
-  display: flex; align-items: center; gap: 5px;
-  background: rgba(14,20,32,0.85); border: 1px solid var(--border);
-  border-radius: 20px; padding: 4px 9px;
-  font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: #34d399;
+/* ── LIVE BADGE ── */
+#live-badge {
+position: fixed; top: calc(var(–header-h) + 9px); right: 10px; z-index: 800;
+display: none; align-items: center; gap: 5px;
+background: var(–panel); border: 1.5px solid #bbf7d0;
+border-radius: 20px; padding: 3px 9px;
+font-family: ‘DM Mono’, monospace; font-size: 0.62rem; color: var(–green);
+box-shadow: var(–shadow);
 }
-.pulse { width: 6px; height: 6px; border-radius: 50%; background: #10b981; animation: pulse 2s ease-in-out infinite; }
-@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.5)} }
+.pulse { width: 6px; height: 6px; border-radius: 50%; background: var(–green); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(1.6)} }
 
-/* ─── LEGEND ─── */
+/* ── LEGEND ── */
 #legend {
-  position: fixed; bottom: 12px; left: 10px; z-index: 800;
-  background: rgba(14,20,32,0.9); border: 1px solid var(--border);
-  border-radius: 10px; padding: 10px 12px;
-  font-size: 0.72rem; font-family: 'JetBrains Mono', monospace; line-height: 2;
+position: fixed; bottom: 16px; left: 10px; z-index: 800;
+background: var(–panel); border: 1.5px solid var(–border);
+border-radius: var(–r); padding: 9px 12px;
+box-shadow: var(–shadow); display: none;
+font-size: 0.72rem; line-height: 1.9;
 }
-#legend .leg-title { font-weight: 700; font-family: 'Syne', sans-serif; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 2px; }
+#legend .leg-title {
+font-family: ‘DM Mono’, monospace; font-size: 0.62rem;
+color: var(–muted); text-transform: uppercase; letter-spacing: 0.06em;
+display: block; margin-bottom: 2px;
+}
 .leg { display: flex; align-items: center; gap: 7px; }
-.leg-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.ldot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
-/* ─── TOAST ─── */
+/* ── ADD MODE BANNER ── */
+#add-banner {
+position: fixed; top: var(–header-h); left: 0; right: 0; z-index: 850;
+background: var(–blue); color: #fff;
+padding: 9px 16px; font-size: 0.82rem; font-weight: 600;
+text-align: center; display: none;
+animation: slide-down 0.2s ease;
+}
+@keyframes slide-down { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
+/* ── AUDIT LOG PANEL ── */
+#log-panel {
+position: fixed; top: var(–header-h); left: 0; right: 0; bottom: 0;
+z-index: 1100; background: var(–panel);
+display: none; flex-direction: column;
+transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+#log-panel.open { display: flex; transform: translateY(0); }
+#log-header {
+display: flex; align-items: center; justify-content: space-between;
+padding: 14px 16px; border-bottom: 1px solid var(–border);
+flex-shrink: 0;
+}
+#log-header h2 { font-size: 1rem; font-weight: 700; }
+#log-header p { font-size: 0.72rem; color: var(–muted); margin-top: 1px; }
+#log-close {
+background: var(–bg); border: 1.5px solid var(–border);
+border-radius: 50%; width: 32px; height: 32px;
+font-size: 1.1rem; cursor: pointer; flex-shrink: 0;
+display: flex; align-items: center; justify-content: center; color: var(–muted);
+}
+#log-list {
+flex: 1; overflow-y: auto; padding: 8px 0;
+-webkit-overflow-scrolling: touch;
+}
+.log-item {
+display: flex; align-items: flex-start; gap: 10px;
+padding: 10px 16px; border-bottom: 1px solid var(–border);
+font-size: 0.8rem;
+}
+.log-item:last-child { border-bottom: none; }
+.log-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.log-body { flex: 1; min-width: 0; }
+.log-street { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log-meta { color: var(–muted); font-size: 0.7rem; font-family: ‘DM Mono’, monospace; margin-top: 1px; }
+.log-session { font-size: 0.65rem; color: #cbd5e1; font-family: ‘DM Mono’, monospace; }
+.revert-btn {
+background: none; border: 1.5px solid var(–border);
+border-radius: 6px; padding: 4px 9px;
+font-size: 0.7rem; font-weight: 600; color: var(–muted);
+cursor: pointer; flex-shrink: 0; white-space: nowrap;
+}
+.revert-btn:active { background: var(–bg); }
+#log-empty {
+text-align: center; padding: 60px 20px;
+color: var(–muted); font-size: 0.85rem;
+}
+
+/* ── TOAST ── */
 #toast {
-  position: fixed; top: calc(var(--header-h) + 12px); left: 50%;
-  transform: translateX(-50%) translateY(-10px);
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 8px; padding: 7px 14px;
-  font-size: 0.78rem; z-index: 2000; white-space: nowrap;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.25s, transform 0.25s;
+position: fixed; bottom: 90px; left: 50%;
+transform: translateX(-50%) translateY(8px);
+background: var(–text); color: #fff;
+border-radius: 20px; padding: 7px 16px;
+font-size: 0.78rem; z-index: 3000; white-space: nowrap;
+opacity: 0; pointer-events: none;
+transition: opacity 0.2s, transform 0.2s;
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ─── POPUP ─── */
+/* ── GPS MARKER ── */
+.gps-dot {
+width: 16px; height: 16px; background: var(–blue);
+border: 3px solid #fff; border-radius: 50%;
+box-shadow: 0 0 0 4px rgba(37,99,235,0.25);
+}
+
+/* ── POPUP ── */
 .leaflet-popup-content-wrapper {
-  background: var(--panel) !important;
-  color: var(--text) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
-  padding: 0 !important;
+background: var(–panel) !important;
+color: var(–text) !important;
+border: 1.5px solid var(–border) !important;
+border-radius: 14px !important;
+box-shadow: var(–shadow-lg) !important;
+padding: 0 !important;
 }
-.leaflet-popup-content { margin: 0 !important; width: auto !important; }
-.leaflet-popup-tip { background: var(--panel) !important; }
-.leaflet-popup-close-button { color: var(--muted) !important; top: 8px !important; right: 8px !important; font-size: 18px !important; }
+.leaflet-popup-content { margin: 0 !important; }
+.leaflet-popup-tip { background: var(–panel) !important; }
+.leaflet-popup-close-button { color: var(–muted) !important; top: 10px !important; right: 10px !important; font-size: 16px !important; z-index: 1; }
 
-.popup-wrap { padding: 16px 16px 12px; min-width: 210px; }
-.popup-id {
-  font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
-  color: var(--muted); margin-bottom: 2px; letter-spacing: 0.04em;
+.pw { padding: 14px 15px 12px; min-width: 220px; }
+.pw-badge {
+display: inline-flex; align-items: center; gap: 5px;
+font-family: ‘DM Mono’, monospace; font-size: 0.62rem;
+color: var(–muted); background: var(–bg);
+border-radius: 4px; padding: 2px 6px; margin-bottom: 6px;
 }
-.popup-street { font-size: 0.92rem; font-weight: 800; margin-bottom: 10px; line-height: 1.2; }
-.popup-status-lbl {
-  font-size: 0.72rem; text-align: center;
-  border-radius: 6px; padding: 5px 8px; margin-bottom: 10px;
-  font-family: 'JetBrains Mono', monospace;
-  background: rgba(255,255,255,0.05);
+.pw-street { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; line-height: 1.25; }
+.pw-status {
+font-size: 0.72rem; text-align: center; border-radius: 6px;
+padding: 5px 8px; margin-bottom: 10px;
+font-family: ‘DM Mono’, monospace; background: var(–bg);
+border: 1px solid var(–border);
 }
-.popup-divider { border: none; border-top: 1px solid var(--border); margin: 0 -16px 10px; }
-
-.btn-row { display: flex; flex-direction: column; gap: 5px; }
-.popup-btn {
-  width: 100%; padding: 9px 12px; border: none; border-radius: 7px;
-  font-size: 0.8rem; font-weight: 700; font-family: 'Syne', sans-serif;
-  cursor: pointer; transition: transform 0.1s, filter 0.1s;
-  letter-spacing: 0.02em;
+hr.pw-div { border: none; border-top: 1px solid var(–border); margin: 0 -15px 10px; }
+.pw-btns { display: flex; flex-direction: column; gap: 5px; }
+.pb {
+width: 100%; padding: 9px; border: none; border-radius: 8px;
+font-size: 0.8rem; font-weight: 700; font-family: ‘DM Sans’, sans-serif;
+cursor: pointer; transition: filter 0.15s, transform 0.1s;
 }
-.popup-btn:active { transform: scale(0.97); }
-.btn-clear  { background: rgba(16,185,129,0.18); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
-.btn-needs  { background: rgba(244,63,94,0.18);  color: #fda4af; border: 1px solid rgba(244,63,94,0.3); }
-.btn-reset  { background: transparent; color: var(--muted); border: 1px solid var(--border); font-size: 0.72rem; padding: 6px; }
-
-/* ─── CUSTOM MARKERS ─── */
-.h-marker {
-  border-radius: 50%;
-  border: 2.5px solid rgba(255,255,255,0.2);
-  transition: transform 0.2s;
-}
+.pb:active { transform: scale(0.97); }
+.pb-clear { background: #d1fae5; color: #065f46; border: 1.5px solid #6ee7b7; }
+.pb-needs { background: #ffe4e6; color: #9f1239; border: 1.5px solid #fda4af; }
+.pb-reset { background: var(–bg); color: var(–muted); border: 1.5px solid var(–border); font-size: 0.72rem; padding: 6px; }
+.pw-user-added { background: #fffbeb; border-top: 1px solid #fde68a; margin: 8px -15px -12px; padding: 7px 15px; border-radius: 0 0 14px 14px; font-size: 0.7rem; color: var(–amber); font-weight: 500; }
 </style>
+
 </head>
 <body>
 
 <!-- HEADER -->
+
 <div id="header">
-  <div id="header-logo">❄️🚒</div>
+  <div id="header-icon">❄️🚒</div>
   <div id="header-title">
     <h1>East Greenwich Hydrant Rescue</h1>
-    <p>TAP HYDRANT → UPDATE STATUS</p>
+    <p>Tap any hydrant to update its status</p>
   </div>
   <div id="stats-bar">
-    <div class="stat"><span class="stat-dot" style="background:var(--red)"></span><span id="cnt-needs">–</span></div>
-    <div class="stat"><span class="stat-dot" style="background:var(--green)"></span><span id="cnt-clear">–</span></div>
-    <div class="stat"><span class="stat-dot" style="background:var(--gray)"></span><span id="cnt-unk">–</span></div>
+    <div class="stat"><span class="sdot" style="background:var(--red)"></span><span id="cnt-needs">–</span></div>
+    <div class="stat"><span class="sdot" style="background:var(--green)"></span><span id="cnt-clear">–</span></div>
+    <div class="stat"><span class="sdot" style="background:var(--gray)"></span><span id="cnt-unk">–</span></div>
   </div>
 </div>
 
 <!-- MAP -->
+
 <div id="map"></div>
 
 <!-- LOADING -->
+
 <div id="loading">
-  <div class="snowflake-spin">❄️</div>
-  <div id="loading-msg">Fetching hydrant locations…</div>
+  <span class="spin">❄️</span>
+  <p id="load-msg">Loading hydrant locations…</p>
 </div>
 
-<!-- LIVE INDICATOR -->
-<div id="live-dot" style="display:none"><div class="pulse"></div> LIVE SYNC</div>
+<!-- LIVE BADGE -->
+
+<div id="live-badge"><div class="pulse"></div>LIVE</div>
+
+<!-- ADD MODE BANNER -->
+
+<div id="add-banner">📍 Tap anywhere on the map to place a missing hydrant</div>
+
+<!-- CONTROLS -->
+
+<div id="controls">
+  <button class="ctrl-btn" id="gps-btn" onclick="toggleGPS()">📍 My Location</button>
+  <button class="ctrl-btn" id="log-btn" onclick="openLog()">📋 Audit Log</button>
+  <button class="ctrl-btn" id="add-btn" onclick="toggleAddMode()">＋ Add Missing Hydrant</button>
+</div>
 
 <!-- LEGEND -->
-<div id="legend" style="display:none">
-  <div class="leg-title">Tap any hydrant</div>
-  <div class="leg"><span class="leg-dot" style="background:var(--gray)"></span>Status unknown</div>
-  <div class="leg"><span class="leg-dot" style="background:var(--red)"></span>Needs digging out</div>
-  <div class="leg"><span class="leg-dot" style="background:var(--green)"></span>Cleared &amp; ready</div>
+
+<div id="legend">
+  <span class="leg-title">Tap any hydrant</span>
+  <div class="leg"><span class="ldot" style="background:var(--gray)"></span>Status unknown</div>
+  <div class="leg"><span class="ldot" style="background:var(--red)"></span>Needs digging out</div>
+  <div class="leg"><span class="ldot" style="background:var(--green)"></span>Cleared &amp; ready</div>
+  <div class="leg"><span class="ldot" style="background:var(--amber);border:1.5px dashed #d97706"></span>User-added</div>
 </div>
 
-<!-- BANNER (demo mode / hosting warning) -->
-<div id="banner">
-  <button id="banner-close" onclick="document.getElementById('banner').style.display='none'">✕</button>
-  <span id="banner-text"></span>
+<!-- AUDIT LOG PANEL -->
+
+<div id="log-panel">
+  <div id="log-header">
+    <div>
+      <h2>📋 Audit Log</h2>
+      <p>Tap ↩ Revert to undo any change</p>
+    </div>
+    <button id="log-close" onclick="closeLog()">✕</button>
+  </div>
+  <div id="log-list"><div id="log-empty">No changes recorded yet.</div></div>
 </div>
 
 <!-- TOAST -->
+
 <div id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════
-//  CONFIG
-// ═══════════════════════════════════════════════
-const CENTER   = [41.657, -71.524];
-const ZOOM     = 14;
-const POLL_MS  = 12000;
-const STORE_KEY = 'eg-hydrant-v3';
-
-// East Greenwich bounding box for Overpass
+// ═══════════════════════════════════════════════════════════
+//  CONFIG & STATE
+// ═══════════════════════════════════════════════════════════
+const CENTER  = [41.657, -71.524];
+const ZOOM    = 14;
+const POLL_MS = 12000;
 const EG_BBOX = '41.615,-71.585,41.710,-71.455';
-
-// OpenStreetMap Overpass API — open CORS headers, works from any hosted origin
-const OVERPASS_URL =
-  `https://overpass-api.de/api/interpreter?data=` +
+const OVERPASS_URL = `https://overpass-api.de/api/interpreter?data=` +
   encodeURIComponent(`[out:json][timeout:30];node["emergency"="fire_hydrant"](${EG_BBOX});out;`);
 
-// ═══════════════════════════════════════════════
-//  MAP INIT
-// ═══════════════════════════════════════════════
+const STORE_STATUS  = 'eg-hydrant-status-v3';
+const STORE_AUDIT   = 'eg-hydrant-audit-v3';
+const STORE_CUSTOM  = 'eg-hydrant-custom-v3';
+
+// Generate a stable session ID for this browser session
+const SESSION_ID = (() => {
+  let id = sessionStorage.getItem('eg-session');
+  if (!id) { id = 'user-' + Math.random().toString(36).slice(2,7); sessionStorage.setItem('eg-session', id); }
+  return id;
+})();
+
+let markers   = {};   // id → L.circleMarker
+let hydrants  = {};   // id → {lat, lon, label, userAdded}
+let statuses  = {};   // id → 'unknown'|'needs'|'clear'
+let auditLog  = [];   // [{id, label, oldStatus, newStatus, ts, session}]
+let customH   = [];   // [{id, lat, lon, label}]
+
+let addMode     = false;
+let gpsActive   = false;
+let gpsMarker   = null;
+let gpsWatch    = null;
+
+// ═══════════════════════════════════════════════════════════
+//  MAP
+// ═══════════════════════════════════════════════════════════
 const map = L.map('map', { zoomControl: false, tap: true }).setView(CENTER, ZOOM);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: '© OSM © CARTO | Hydrant data: OSM contributors & RIGIS',
+// Light CartoDB Positron basemap
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a> | Hydrant data: OSM & RIGIS',
   subdomains: 'abcd', maxZoom: 20
 }).addTo(map);
 
-// ═══════════════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════════════
-let markers  = {};   // id → L.circleMarker
-let hydrants = {};   // id → {lat, lon, tags}
-let statuses = {};   // id → 'unknown'|'needs'|'clear'
-let demoMode = false;
+// Tap-to-add handler
+map.on('click', function(e) {
+  if (!addMode) return;
+  const label = prompt('Street name or description for this hydrant (optional):') ?? 'User-added hydrant';
+  if (label === null) return; // cancelled
+  addCustomHydrant(e.latlng.lat, e.latlng.lng, label.trim() || 'User-added hydrant');
+  toggleAddMode();
+});
 
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 //  UI HELPERS
-// ═══════════════════════════════════════════════
-function toast(msg, dur = 2500) {
+// ═══════════════════════════════════════════════════════════
+function toast(msg, dur = 2600) {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), dur);
 }
-
 function setLoading(msg) {
   const el = document.getElementById('loading');
-  if (msg) { el.style.display = 'flex'; document.getElementById('loading-msg').textContent = msg; }
-  else { el.style.display = 'none'; }
+  if (msg) { el.style.display='flex'; document.getElementById('load-msg').textContent=msg; }
+  else { el.style.display='none'; }
 }
-
-function showBanner(html) {
-  const b = document.getElementById('banner');
-  document.getElementById('banner-text').innerHTML = html;
-  b.style.display = 'block';
+function colorOf(s, userAdded) {
+  if (userAdded && (!s || s === 'unknown')) return '#d97706';
+  return s === 'clear' ? '#059669' : s === 'needs' ? '#e11d48' : '#94a3b8';
 }
-
-function colorOf(s) {
-  return s === 'clear' ? '#10b981' : s === 'needs' ? '#f43f5e' : '#475569';
-}
-
 function labelOf(s) {
-  return s === 'clear' ? '✅ CLEARED — ready for fire use'
-       : s === 'needs' ? '⚠️ NEEDS DIGGING OUT'
+  return s==='clear' ? '✅ CLEARED — ready for fire use'
+       : s==='needs' ? '⚠️ NEEDS DIGGING OUT'
        : '❓ Status unknown — tap to update';
 }
-
 function updateStats() {
   const ids = Object.keys(hydrants);
-  const c = ids.filter(i => statuses[i] === 'clear').length;
-  const n = ids.filter(i => statuses[i] === 'needs').length;
-  const u = ids.filter(i => !statuses[i] || statuses[i] === 'unknown').length;
-  document.getElementById('cnt-clear').textContent = c;
-  document.getElementById('cnt-needs').textContent = n;
-  document.getElementById('cnt-unk').textContent   = u;
+  document.getElementById('cnt-clear').textContent = ids.filter(i=>statuses[i]==='clear').length;
+  document.getElementById('cnt-needs').textContent = ids.filter(i=>statuses[i]==='needs').length;
+  document.getElementById('cnt-unk').textContent   = ids.filter(i=>!statuses[i]||statuses[i]==='unknown').length;
+}
+function fmtTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' +
+         d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
 }
 
-// ═══════════════════════════════════════════════
-//  STORAGE (shared, real-time across all users)
-// ═══════════════════════════════════════════════
-async function saveAll() {
-  try { await window.storage.set(STORE_KEY, JSON.stringify(statuses), true); }
-  catch(e) {}
-}
-
-async function loadAll() {
+// ═══════════════════════════════════════════════════════════
+//  STORAGE
+// ═══════════════════════════════════════════════════════════
+async function save() {
   try {
-    const r = await window.storage.get(STORE_KEY, true);
-    if (r?.value) Object.assign(statuses, JSON.parse(r.value));
+    await window.storage.set(STORE_STATUS, JSON.stringify(statuses), true);
+    await window.storage.set(STORE_AUDIT,  JSON.stringify(auditLog.slice(-200)), true); // keep last 200
+    await window.storage.set(STORE_CUSTOM, JSON.stringify(customH), true);
   } catch(e) {}
 }
-
+async function loadAll() {
+  try {
+    const s = await window.storage.get(STORE_STATUS, true);
+    if (s?.value) Object.assign(statuses, JSON.parse(s.value));
+  } catch(e) {}
+  try {
+    const a = await window.storage.get(STORE_AUDIT, true);
+    if (a?.value) auditLog = JSON.parse(a.value);
+  } catch(e) {}
+  try {
+    const c = await window.storage.get(STORE_CUSTOM, true);
+    if (c?.value) customH = JSON.parse(c.value);
+  } catch(e) {}
+}
 async function syncRemote() {
   try {
-    const r = await window.storage.get(STORE_KEY, true);
-    if (!r?.value) return;
-    const remote = JSON.parse(r.value);
+    const s = await window.storage.get(STORE_STATUS, true);
+    if (!s?.value) return;
+    const remote = JSON.parse(s.value);
     let changed = 0;
     for (const [id, st] of Object.entries(remote)) {
       if (statuses[id] !== st) { applyStatus(id, st, false); changed++; }
     }
-    if (changed) { updateStats(); toast(`🔄 ${changed} hydrant(s) updated by another volunteer`); }
+
+    const c = await window.storage.get(STORE_CUSTOM, true);
+    if (c?.value) {
+      const remoteCustom = JSON.parse(c.value);
+      for (const h of remoteCustom) {
+        if (!hydrants[h.id]) { renderHydrant(h.id, h.lat, h.lon, h.label, true); changed++; }
+      }
+    }
+
+    if (changed) { updateStats(); toast(`🔄 ${changed} update(s) from other volunteers`); }
   } catch(e) {}
 }
 
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 //  MARKERS
-// ═══════════════════════════════════════════════
-function buildMarker(id, lat, lon, label) {
-  hydrants[id] = { lat, lon, label };
+// ═══════════════════════════════════════════════════════════
+function renderHydrant(id, lat, lon, label, userAdded = false) {
+  hydrants[id] = { lat, lon, label, userAdded };
   const st    = statuses[id] || 'unknown';
-  const color = colorOf(st);
+  const color = colorOf(st, userAdded);
 
   const m = L.circleMarker([lat, lon], {
-    radius: 7, color, fillColor: color, fillOpacity: 0.85, weight: 2.5
+    radius: 7, color, fillColor: color, fillOpacity: 0.88,
+    weight: userAdded ? 2.5 : 2,
+    dashArray: userAdded ? '4,3' : null
   }).addTo(map);
 
   markers[id] = m;
-
-  m.bindPopup(makePopup(id, label), { maxWidth: 250 });
-  return m;
+  m.bindPopup(() => makePopup(id), { maxWidth: 260 });
 }
 
-function makePopup(id, label) {
-  return () => {
-    const div = document.createElement('div');
-    div.className = 'popup-wrap';
-    div.innerHTML = `
-      <div class="popup-id">HYDRANT ${demoMode ? '⚠️ DEMO' : '#' + id}</div>
-      <div class="popup-street">${label}</div>
-      <div class="popup-status-lbl" id="slbl-${id}">${labelOf(statuses[id] || 'unknown')}</div>
-      <hr class="popup-divider">
-      <div class="btn-row">
-        <button class="popup-btn btn-clear" onclick="window.setStatus('${id}','clear')">✅ Mark CLEARED</button>
-        <button class="popup-btn btn-needs" onclick="window.setStatus('${id}','needs')">⚠️ Mark NEEDS DIGGING</button>
-        <button class="popup-btn btn-reset" onclick="window.setStatus('${id}','unknown')">↩ Reset to Unknown</button>
-      </div>
-    `;
-    return div;
-  };
+function makePopup(id) {
+  const h  = hydrants[id];
+  const st = statuses[id] || 'unknown';
+  const div = document.createElement('div');
+  div.className = 'pw';
+  div.innerHTML = `
+    <div class="pw-badge">
+      ${h.userAdded ? '🟡 USER-ADDED' : '🔵 OSM #' + String(id).slice(-6)}
+    </div>
+    <div class="pw-street">${h.label}</div>
+    <div class="pw-status" id="slbl-${id}">${labelOf(st)}</div>
+    <hr class="pw-div">
+    <div class="pw-btns">
+      <button class="pb pb-clear" onclick="window.setStatus('${id}','clear')">✅ Mark CLEARED</button>
+      <button class="pb pb-needs" onclick="window.setStatus('${id}','needs')">⚠️ Mark NEEDS DIGGING</button>
+      <button class="pb pb-reset" onclick="window.setStatus('${id}','unknown')">↩ Reset to Unknown</button>
+    </div>
+    ${h.userAdded ? '<div class="pw-user-added">📍 Added by a volunteer — not in official database</div>' : ''}
+  `;
+  return div;
 }
 
 function applyStatus(id, st, animate = false) {
   statuses[id] = st;
   const m = markers[id];
   if (!m) return;
-  const c = colorOf(st);
+  const h = hydrants[id];
+  const c = colorOf(st, h?.userAdded);
   m.setStyle({ color: c, fillColor: c });
-  if (animate) { m.setRadius(11); setTimeout(() => m.setRadius(7), 250); }
+  if (animate) { m.setRadius(11); setTimeout(() => m.setRadius(7), 220); }
   const lbl = document.getElementById('slbl-' + id);
   if (lbl) lbl.textContent = labelOf(st);
 }
 
-window.setStatus = async (id, st) => {
-  applyStatus(id, st, true);
+// ═══════════════════════════════════════════════════════════
+//  STATUS UPDATE WITH AUDIT
+// ═══════════════════════════════════════════════════════════
+window.setStatus = async (id, newSt) => {
+  const oldSt = statuses[id] || 'unknown';
+  if (oldSt === newSt) { map.closePopup(); return; }
+
+  // Record audit entry
+  auditLog.unshift({
+    id, label: hydrants[id]?.label || id,
+    oldStatus: oldSt, newStatus: newSt,
+    ts: Date.now(), session: SESSION_ID
+  });
+
+  applyStatus(id, newSt, true);
   updateStats();
-  await saveAll();
+  await save();
   map.closePopup();
-  const msgs = { clear:'✅ Marked cleared!', needs:'⚠️ Marked: needs digging', unknown:'↩ Status reset' };
-  toast(msgs[st]);
+
+  const msgs = { clear:'✅ Marked cleared!', needs:'⚠️ Needs digging — logged', unknown:'↩ Status reset' };
+  toast(msgs[newSt] || 'Updated');
+
+  // Refresh log if open
+  if (document.getElementById('log-panel').classList.contains('open')) renderLog();
 };
 
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+//  AUDIT LOG UI
+// ═══════════════════════════════════════════════════════════
+function openLog() {
+  renderLog();
+  const panel = document.getElementById('log-panel');
+  panel.style.display = 'flex';
+  requestAnimationFrame(() => panel.classList.add('open'));
+}
+function closeLog() {
+  const panel = document.getElementById('log-panel');
+  panel.classList.remove('open');
+  setTimeout(() => { panel.style.display='none'; }, 310);
+}
+
+function renderLog() {
+  const list = document.getElementById('log-list');
+  if (auditLog.length === 0) {
+    list.innerHTML = '<div id="log-empty">No changes recorded yet.</div>';
+    return;
+  }
+  list.innerHTML = auditLog.map((entry, idx) => {
+    const stColor = entry.newStatus === 'clear' ? '#059669' : entry.newStatus === 'needs' ? '#e11d48' : '#94a3b8';
+    const stLabel = entry.newStatus === 'clear' ? 'Cleared' : entry.newStatus === 'needs' ? 'Needs digging' : 'Reset';
+    const isMe    = entry.session === SESSION_ID;
+    return `
+      <div class="log-item">
+        <span class="log-dot" style="background:${stColor}"></span>
+        <div class="log-body">
+          <div class="log-street">${entry.label}</div>
+          <div class="log-meta">${stLabel} &nbsp;·&nbsp; ${fmtTime(entry.ts)}</div>
+          <div class="log-session">${isMe ? '👤 You' : entry.session}</div>
+        </div>
+        <button class="revert-btn" onclick="revertEntry(${idx})">↩ Revert</button>
+      </div>`;
+  }).join('');
+}
+
+window.revertEntry = async (idx) => {
+  const entry = auditLog[idx];
+  if (!entry) return;
+
+  // Add a new audit entry for the revert
+  auditLog.unshift({
+    id: entry.id, label: entry.label,
+    oldStatus: entry.newStatus, newStatus: entry.oldStatus,
+    ts: Date.now(), session: SESSION_ID,
+    isRevert: true
+  });
+
+  // Remove the original entry
+  auditLog.splice(idx + 1, 1);
+
+  applyStatus(entry.id, entry.oldStatus, true);
+  updateStats();
+  await save();
+  renderLog();
+  toast(`↩ Reverted: ${entry.label}`);
+};
+
+// ═══════════════════════════════════════════════════════════
+//  ADD MISSING HYDRANT
+// ═══════════════════════════════════════════════════════════
+function toggleAddMode() {
+  addMode = !addMode;
+  const btn    = document.getElementById('add-btn');
+  const banner = document.getElementById('add-banner');
+  if (addMode) {
+    btn.textContent = '✕ Cancel Adding';
+    btn.classList.add('cancel');
+    banner.style.display = 'block';
+    map.getContainer().style.cursor = 'crosshair';
+  } else {
+    btn.innerHTML = '＋ Add Missing Hydrant';
+    btn.classList.remove('cancel');
+    banner.style.display = 'none';
+    map.getContainer().style.cursor = '';
+  }
+}
+
+async function addCustomHydrant(lat, lon, label) {
+  const id = 'custom-' + Date.now();
+  customH.push({ id, lat, lon, label });
+  renderHydrant(id, lat, lon, label, true);
+  updateStats();
+
+  auditLog.unshift({
+    id, label,
+    oldStatus: null, newStatus: 'added',
+    ts: Date.now(), session: SESSION_ID
+  });
+
+  await save();
+  toast(`📍 Hydrant added: ${label}`);
+
+  // Open its popup
+  setTimeout(() => markers[id]?.openPopup(), 300);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GPS / MY LOCATION
+// ═══════════════════════════════════════════════════════════
+function toggleGPS() {
+  if (gpsActive) {
+    stopGPS();
+  } else {
+    startGPS();
+  }
+}
+
+function startGPS() {
+  if (!navigator.geolocation) { toast('📍 GPS not available on this device'); return; }
+  toast('📍 Getting your location…');
+  gpsWatch = navigator.geolocation.watchPosition(
+    pos => {
+      const { latitude: lat, longitude: lon } = pos.coords;
+
+      if (!gpsMarker) {
+        gpsMarker = L.marker([lat, lon], {
+          icon: L.divIcon({ className: '', html: '<div class="gps-dot"></div>', iconSize:[16,16], iconAnchor:[8,8] }),
+          zIndexOffset: 1000
+        }).addTo(map).bindPopup('📍 <strong>Your Location</strong>');
+      } else {
+        gpsMarker.setLatLng([lat, lon]);
+      }
+
+      map.setView([lat, lon], Math.max(map.getZoom(), 16));
+      gpsActive = true;
+      document.getElementById('gps-btn').classList.add('active');
+      document.getElementById('gps-btn').textContent = '📍 Following You';
+    },
+    err => {
+      const msgs = {1:'Location permission denied',2:'Position unavailable',3:'Location request timed out'};
+      toast('⚠️ ' + (msgs[err.code] || 'GPS error'));
+      stopGPS();
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+  );
+}
+
+function stopGPS() {
+  if (gpsWatch !== null) { navigator.geolocation.clearWatch(gpsWatch); gpsWatch = null; }
+  if (gpsMarker) { map.removeLayer(gpsMarker); gpsMarker = null; }
+  gpsActive = false;
+  const btn = document.getElementById('gps-btn');
+  btn.classList.remove('active');
+  btn.textContent = '📍 My Location';
+}
+
+// ═══════════════════════════════════════════════════════════
 //  DATA LOADING
-// ═══════════════════════════════════════════════
-function showMap() {
+// ═══════════════════════════════════════════════════════════
+function showMapUI() {
   setLoading(false);
-  document.getElementById('live-dot').style.display = 'flex';
-  document.getElementById('legend').style.display   = 'block';
+  document.getElementById('live-badge').style.display = 'flex';
+  document.getElementById('controls').style.display   = 'flex';
+  document.getElementById('legend').style.display     = 'block';
   updateStats();
   setInterval(syncRemote, POLL_MS);
 }
 
 async function loadOverpass() {
-  setLoading('Fetching hydrants from OpenStreetMap…');
+  setLoading('Loading hydrant locations from OpenStreetMap…');
   const res  = await fetch(OVERPASS_URL);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   const nodes = (data.elements || []).filter(e => e.type === 'node');
-  if (nodes.length === 0) throw new Error('No OSM hydrants found in bounding box');
+  if (!nodes.length) throw new Error('No hydrants found in area');
   return nodes;
 }
 
-async function tryLoadRIGIS() {
-  // Try RIGIS ArcGIS Feature Service as secondary source
-  // Service name confirmed from RIGIS item 03613fa8...
-  const urls = [
-    'https://services2.arcgis.com/S8zZg9pg23JUEexQ/arcgis/rest/services/e911Hydrants22r1/FeatureServer/0/query?geometry=-71.585%2C41.615%2C-71.455%2C41.710&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelIntersects&outFields=OBJECTID%2CSTREET_NAM%2CSTREET_NUM&returnGeometry=true&f=geojson',
-    'https://services2.arcgis.com/S8zZg9pg23JUEexQ/arcgis/rest/services/E911Hydrants/FeatureServer/0/query?geometry=-71.585%2C41.615%2C-71.455%2C41.710&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelIntersects&outFields=*&returnGeometry=true&f=geojson',
-  ];
-  for (const url of urls) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (data.error) continue;
-      if (!data.features || data.features.length === 0) continue;
-      return data.features;
-    } catch(e) { continue; }
-  }
-  throw new Error('RIGIS not reachable');
-}
-
-function renderOSMNodes(nodes) {
-  nodes.forEach(node => {
-    const id  = String(node.id);
-    const t   = node.tags || {};
-    const street = [t['addr:housenumber'], t['addr:street'] || t.name || 'Fire Hydrant'].filter(Boolean).join(' ');
-    buildMarker(id, node.lat, node.lon, street);
-  });
-  toast(`Loaded ${nodes.length} hydrants from OpenStreetMap`);
-}
-
-function renderRIGIS(features) {
-  features.forEach(f => {
-    const p  = f.properties;
-    const id = String(p.OBJECTID || p.FID);
-    const [lon, lat] = f.geometry.coordinates;
-    const street = [p.STREET_NUM, p.STREET_NAM].filter(Boolean).join(' ') || 'Fire Hydrant';
-    buildMarker(id, lat, lon, street);
-  });
-  toast(`Loaded ${features.length} hydrants from RIGIS`);
-}
-
-function renderDemo() {
-  demoMode = true;
-  // ~35 plausible East Greenwich hydrant locations (approximate streets)
-  const pts = [
-    [41.6597,-71.5283,'Main St & Division'],[41.6605,-71.5270,'Main St'],[41.6614,-71.5253,'Main St & London'],
-    [41.6578,-71.5246,'Division St'],[41.6590,-71.5230,'Division St'],[41.6568,-71.5214,'King St'],
-    [41.6557,-71.5229,'King St'],[41.6543,-71.5243,'King St & Academy'],
-    [41.6620,-71.5178,'London St'],[41.6634,-71.5162,'London St'],[41.6647,-71.5141,'London St'],
-    [41.6529,-71.5280,'Academy Ave'],[41.6515,-71.5260,'Academy Ave'],[41.6501,-71.5300,'Academy Ave'],
-    [41.6661,-71.5200,'Frenchtown Rd'],[41.6675,-71.5225,'Frenchtown Rd'],[41.6688,-71.5251,'Frenchtown Rd'],
-    [41.6499,-71.5315,'Forge Rd'],[41.6510,-71.5341,'Forge Rd'],[41.6521,-71.5362,'Forge Rd'],
-    [41.6697,-71.5272,'Middle Rd'],[41.6712,-71.5292,'Middle Rd'],[41.6480,-71.5275,'Middle Rd'],
-    [41.6464,-71.5250,'Peirce St'],[41.6690,-71.5131,'First Ave'],[41.6701,-71.5101,'First Ave'],
-    [41.6720,-71.5182,'Brown St'],[41.6455,-71.5230,'First Ave'],[41.6442,-71.5261,'Second Ave'],
-    [41.6535,-71.5187,'Weybosset St'],[41.6548,-71.5171,'Weybosset St'],[41.6560,-71.5155,'Weybosset St'],
-    [41.6572,-71.5140,'Division & Weybosset'],[41.6583,-71.5125,'Harbor View Dr'],[41.6596,-71.5110,'Harbor View Dr'],
-  ];
-  pts.forEach(([lat, lon, label], i) => buildMarker(`DEMO-${i}`, lat, lon, label));
-  toast(`Demo mode: ${pts.length} approximate hydrant locations`);
-  showBanner(
-    `<strong>⚠️ DEMO DATA — approximate hydrant positions only.</strong><br>` +
-    `This app can't load real data when opened as a local file on iOS. ` +
-    `Host it free on <a href="https://app.netlify.com/drop" target="_blank">Netlify Drop</a> in 30 seconds for live data + real sharing.`
-  );
-}
-
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 //  BOOT
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 (async () => {
   await loadAll();
 
-  let loaded = false;
-
-  // 1. Try OpenStreetMap Overpass (best CORS support)
+  let osmCount = 0;
   try {
     const nodes = await loadOverpass();
-    renderOSMNodes(nodes);
-    loaded = true;
-    // If very few OSM hydrants found, note that RIGIS has more
-    if (nodes.length < 20) {
-      showBanner(
-        `Only ${nodes.length} hydrant(s) mapped in OpenStreetMap for East Greenwich. ` +
-        `The town's RIGIS dataset has more. See the <a href="https://www.rigis.org" target="_blank">RIGIS site</a> to export and embed the full dataset.`
-      );
-    }
-  } catch (e1) {
-    // 2. Try RIGIS ArcGIS feature service
-    try {
-      setLoading('Trying RIGIS GIS database…');
-      const features = await tryLoadRIGIS();
-      renderRIGIS(features);
-      loaded = true;
-    } catch (e2) {
-      // 3. Fall back to demo data
-      renderDemo();
-      loaded = true;
-    }
+    osmCount = nodes.length;
+    nodes.forEach(n => {
+      const t = n.tags || {};
+      const label = [t['addr:housenumber'], t['addr:street'] || t.name].filter(Boolean).join(' ') || 'Fire Hydrant';
+      renderHydrant(String(n.id), n.lat, n.lon, label, false);
+    });
+    toast(`Loaded ${osmCount} hydrants`);
+  } catch(e) {
+    // Minimal demo fallback — no error screen, silent
+    const pts = [
+      [41.6597,-71.5283,'Main St & Division'],[41.6605,-71.5270,'Main St'],[41.6614,-71.5253,'Main St & London'],
+      [41.6578,-71.5246,'Division St'],[41.6590,-71.5230,'Division St'],[41.6568,-71.5214,'King St'],
+      [41.6557,-71.5229,'King St'],[41.6620,-71.5178,'London St'],[41.6634,-71.5162,'London St'],
+      [41.6661,-71.5200,'Frenchtown Rd'],[41.6675,-71.5225,'Frenchtown Rd'],[41.6499,-71.5315,'Forge Rd'],
+    ];
+    pts.forEach(([lat,lon,lbl],i) => renderHydrant(`DEMO-${i}`,lat,lon,lbl,false));
+    toast('⚠️ Using demo data — check network connection');
   }
 
-  if (loaded) showMap();
+  // Restore any user-added hydrants
+  for (const h of customH) {
+    if (!hydrants[h.id]) renderHydrant(h.id, h.lat, h.lon, h.label, true);
+  }
+
+  showMapUI();
 })();
 </script>
+
 </body>
 </html>
