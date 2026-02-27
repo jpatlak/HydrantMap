@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -11,6 +10,36 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getDatabase, ref, onValue, update, get, set }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+  // ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────────────────
+  const firebaseConfig = {
+    apiKey:            "AIzaSyD9aXtuBa9VFAofEpOxolXRf2VuBcwIEJI",
+    authDomain:        "hydrantmapper.firebaseapp.com",
+    databaseURL:       "https://hydrantmapper-default-rtdb.firebaseio.com",
+    projectId:         "hydrantmapper",
+    storageBucket:     "hydrantmapper.firebasestorage.app",
+    messagingSenderId: "649548585477",
+    appId:             "1:649548585477:web:a203e7ad637d77abb39a6c"
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const ready = !firebaseConfig.apiKey.startsWith('PASTE');
+  if (ready) {
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+    window._fb = { db, ref, onValue, update, get, set };
+    window._firebaseReady = true;
+  } else {
+    window._firebaseReady = false;
+  }
+</script>
+
 <style>
 :root {
   --red:     #e11d48;
@@ -18,246 +47,290 @@
   --blue:    #2563eb;
   --amber:   #d97706;
   --gray:    #94a3b8;
+  --indigo:  #4f46e5;
   --bg:      #f8fafc;
   --panel:   #ffffff;
   --border:  #e2e8f0;
   --text:    #0f172a;
   --muted:   #64748b;
-  --shadow:  0 2px 12px rgba(0,0,0,0.10);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.14);
-  --header-h: 58px;
-  --r: 10px;
+  --shadow:  0 2px 12px rgba(0,0,0,0.09);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.13);
+  --hh: 58px; /* header height */
 }
-
-- { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-body {
-font-family: ‘DM Sans’, sans-serif;
-background: var(–bg);
-color: var(–text);
-overflow: hidden;
-height: 100dvh;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100dvh; }
 
 /* ── HEADER ── */
 #header {
-position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-height: var(–header-h);
-background: var(–panel);
-border-bottom: 1px solid var(–border);
-box-shadow: var(–shadow);
-display: flex; align-items: center; padding: 0 12px; gap: 8px;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  height: var(--hh); background: var(--panel);
+  border-bottom: 1px solid var(--border); box-shadow: var(--shadow);
+  display: flex; align-items: center; padding: 0 12px; gap: 8px;
 }
-#header-icon { font-size: 1.3rem; flex-shrink: 0; }
-#header-title { flex: 1; min-width: 0; }
-#header-title h1 {
-font-size: 0.88rem; font-weight: 700; color: var(–text);
-white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-#header-title p {
-font-family: ‘DM Mono’, monospace; font-size: 0.6rem;
-color: var(–muted); letter-spacing: 0.05em; text-transform: uppercase;
-}
+#hicon { font-size: 1.3rem; flex-shrink: 0; }
+#htitle { flex: 1; min-width: 0; }
+#htitle h1 { font-size: .88rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#htitle p  { font-family: 'DM Mono', monospace; font-size: .6rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 #stats-bar { display: flex; gap: 5px; flex-shrink: 0; }
 .stat {
-display: flex; align-items: center; gap: 4px;
-background: var(–bg); border: 1.5px solid var(–border);
-border-radius: 20px; padding: 3px 9px;
-font-family: ‘DM Mono’, monospace; font-size: 0.72rem; font-weight: 500;
-white-space: nowrap;
+  display: flex; align-items: center; gap: 4px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 20px; padding: 3px 9px;
+  font-family: 'DM Mono', monospace; font-size: .72rem; font-weight: 500;
 }
 .sdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 
 /* ── MAP ── */
-#map {
-position: fixed;
-top: var(–header-h); bottom: 0; left: 0; right: 0;
-}
+#map { position: fixed; top: var(--hh); bottom: 0; left: 0; right: 0; }
 
 /* ── LOADING ── */
 #loading {
-position: fixed; top: var(–header-h); inset: 0;
-background: var(–bg); z-index: 900;
-display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  position: fixed; top: var(--hh); left: 0; right: 0; bottom: 0;
+  background: var(--bg); z-index: 900;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
 }
 .spin { font-size: 2.2rem; animation: spin 2.5s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
-#loading p { color: var(–muted); font-size: 0.82rem; font-family: ‘DM Mono’, monospace; }
+#load-msg { color: var(--muted); font-size: .82rem; font-family: 'DM Mono', monospace; text-align: center; padding: 0 20px; }
 
-/* ── CONTROLS (bottom right) ── */
-#controls {
-position: fixed; bottom: 16px; right: 12px; z-index: 800;
-display: none; flex-direction: column; gap: 8px; align-items: flex-end;
+/* ── STORM TILE (top-left, below header) ── */
+#storm-tile {
+  position: fixed; top: calc(var(--hh) + 9px); left: 10px; z-index: 800;
+  display: none; flex-direction: column; gap: 0;
+  background: var(--panel); border: 1.5px solid var(--border);
+  border-radius: 12px; box-shadow: var(--shadow);
+  overflow: hidden; min-width: 192px;
 }
-.ctrl-btn {
-display: flex; align-items: center; gap: 6px;
-background: var(–panel); border: 1.5px solid var(–border);
-border-radius: 24px; padding: 8px 13px;
-font-size: 0.78rem; font-weight: 600; color: var(–text);
-cursor: pointer; box-shadow: var(–shadow);
-transition: transform 0.15s, box-shadow 0.15s;
-white-space: nowrap;
+#storm-header {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 10px 6px;
 }
-.ctrl-btn:active { transform: scale(0.96); }
-#gps-btn.active { background: #eff6ff; border-color: #93c5fd; color: var(–blue); }
-#add-btn { background: var(–blue); border-color: var(–blue); color: #fff; }
-#add-btn.cancel { background: var(–red); border-color: var(–red); }
-#log-btn { background: var(–panel); }
+#storm-icon { font-size: 1rem; flex-shrink: 0; }
+#storm-info { flex: 1; min-width: 0; }
+#storm-label { font-family: 'DM Mono', monospace; font-size: .58rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+#storm-date  { font-size: .82rem; font-weight: 700; color: var(--text); white-space: nowrap; }
+/* Filter toggle button — full-width strip at bottom of tile */
+#filter-btn {
+  width: 100%; padding: 6px 10px;
+  border: none; border-top: 1px solid var(--border);
+  background: var(--bg); color: var(--muted);
+  font-size: .72rem; font-weight: 600; font-family: 'DM Sans', sans-serif;
+  cursor: pointer; text-align: center; transition: background .15s, color .15s;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+#filter-btn:active { background: #f1f5f9; }
+#filter-btn.active {
+  background: #eff6ff; color: var(--blue); border-top-color: #bfdbfe;
+}
+#filter-btn .fb-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--muted); flex-shrink: 0;
+  transition: background .15s;
+}
+#filter-btn.active .fb-dot { background: var(--blue); }
 
-/* ── LIVE BADGE ── */
-#live-badge {
-position: fixed; top: calc(var(–header-h) + 9px); right: 10px; z-index: 800;
-display: none; align-items: center; gap: 5px;
-background: var(–panel); border: 1.5px solid #bbf7d0;
-border-radius: 20px; padding: 3px 9px;
-font-family: ‘DM Mono’, monospace; font-size: 0.62rem; color: var(–green);
-box-shadow: var(–shadow);
+/* Filter active banner */
+#filter-banner {
+  position: fixed; top: var(--hh); left: 0; right: 0; z-index: 850;
+  background: #eff6ff; border-bottom: 1.5px solid #bfdbfe;
+  padding: 6px 16px; font-size: .76rem; font-weight: 600; color: var(--blue);
+  text-align: center; display: none;
 }
-.pulse { width: 6px; height: 6px; border-radius: 50%; background: var(–green); animation: pulse 2s ease-in-out infinite; }
+
+/* ── SYNC BADGE ── */
+#sync-badge {
+  position: fixed; top: calc(var(--hh) + 9px); right: 10px; z-index: 800;
+  display: none; align-items: center; gap: 5px;
+  background: var(--panel); border: 1.5px solid #bbf7d0;
+  border-radius: 20px; padding: 3px 9px;
+  font-family: 'DM Mono', monospace; font-size: .62rem; color: var(--green);
+  box-shadow: var(--shadow);
+}
+#sync-badge.local { border-color: #fde68a; color: var(--amber); }
+.pulse { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 2s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(1.6)} }
 
-/* ── LEGEND ── */
+/* ── CONTROLS (bottom-right) ── */
+#controls {
+  position: fixed; bottom: 16px; right: 12px; z-index: 800;
+  display: none; flex-direction: column; gap: 8px; align-items: flex-end;
+}
+.ctrl-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--panel); border: 1.5px solid var(--border);
+  border-radius: 24px; padding: 8px 13px;
+  font-size: .78rem; font-weight: 600; color: var(--text);
+  cursor: pointer; box-shadow: var(--shadow);
+  transition: transform .15s; white-space: nowrap;
+}
+.ctrl-btn:active { transform: scale(.96); }
+#gps-btn.active { background: #eff6ff; border-color: #93c5fd; color: var(--blue); }
+#add-btn { background: var(--blue); border-color: var(--blue); color: #fff; }
+#add-btn.cancel { background: var(--red); border-color: var(--red); }
+#admin-btn { color: var(--muted); font-size: .72rem; }
+
+/* ── LEGEND (bottom-left) ── */
 #legend {
-position: fixed; bottom: 16px; left: 10px; z-index: 800;
-background: var(–panel); border: 1.5px solid var(–border);
-border-radius: var(–r); padding: 9px 12px;
-box-shadow: var(–shadow); display: none;
-font-size: 0.72rem; line-height: 1.9;
+  position: fixed; bottom: 16px; left: 10px; z-index: 800;
+  background: var(--panel); border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 9px 12px;
+  box-shadow: var(--shadow); display: none; font-size: .72rem; line-height: 1.9;
 }
-#legend .leg-title {
-font-family: ‘DM Mono’, monospace; font-size: 0.62rem;
-color: var(–muted); text-transform: uppercase; letter-spacing: 0.06em;
-display: block; margin-bottom: 2px;
-}
+.leg-title { font-family: 'DM Mono', monospace; font-size: .62rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 2px; }
 .leg { display: flex; align-items: center; gap: 7px; }
 .ldot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
-/* ── ADD MODE BANNER ── */
+/* ── ADD BANNER ── */
 #add-banner {
-position: fixed; top: var(–header-h); left: 0; right: 0; z-index: 850;
-background: var(–blue); color: #fff;
-padding: 9px 16px; font-size: 0.82rem; font-weight: 600;
-text-align: center; display: none;
-animation: slide-down 0.2s ease;
+  position: fixed; top: var(--hh); left: 0; right: 0; z-index: 860;
+  background: var(--blue); color: #fff;
+  padding: 9px 16px; font-size: .82rem; font-weight: 600;
+  text-align: center; display: none;
 }
-@keyframes slide-down { from { transform: translateY(-100%); } to { transform: translateY(0); } }
 
-/* ── AUDIT LOG PANEL ── */
-#log-panel {
-position: fixed; top: var(–header-h); left: 0; right: 0; bottom: 0;
-z-index: 1100; background: var(–panel);
-display: none; flex-direction: column;
-transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+/* ── SETUP NOTICE ── */
+#setup-notice {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 800;
+  background: #fffbeb; border-top: 2px solid #fde68a;
+  padding: 10px 14px; font-size: .75rem; line-height: 1.5; display: none;
 }
-#log-panel.open { display: flex; transform: translateY(0); }
-#log-header {
-display: flex; align-items: center; justify-content: space-between;
-padding: 14px 16px; border-bottom: 1px solid var(–border);
-flex-shrink: 0;
+#setup-notice strong { color: #92400e; }
+#setup-notice a { color: var(--blue); }
+#snc { float: right; background: none; border: none; font-size: 1rem; cursor: pointer; color: var(--muted); padding: 0 0 0 8px; }
+
+/* ── SLIDE-UP PANELS (Audit Log & Admin) ── */
+.slide-panel {
+  position: fixed; top: var(--hh); left: 0; right: 0; bottom: 0;
+  z-index: 1100; background: var(--panel);
+  display: none; flex-direction: column;
+  transform: translateY(100%); transition: transform .3s cubic-bezier(.4,0,.2,1);
 }
-#log-header h2 { font-size: 1rem; font-weight: 700; }
-#log-header p { font-size: 0.72rem; color: var(–muted); margin-top: 1px; }
-#log-close {
-background: var(–bg); border: 1.5px solid var(–border);
-border-radius: 50%; width: 32px; height: 32px;
-font-size: 1.1rem; cursor: pointer; flex-shrink: 0;
-display: flex; align-items: center; justify-content: center; color: var(–muted);
+.slide-panel.open { display: flex; transform: translateY(0); }
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
-#log-list {
-flex: 1; overflow-y: auto; padding: 8px 0;
--webkit-overflow-scrolling: touch;
+.panel-header h2 { font-size: 1rem; font-weight: 700; }
+.panel-header p  { font-size: .72rem; color: var(--muted); margin-top: 1px; }
+.panel-close {
+  background: var(--bg); border: 1.5px solid var(--border); border-radius: 50%;
+  width: 32px; height: 32px; font-size: 1.1rem; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; color: var(--muted);
 }
+
+/* Audit log list */
+#log-list { flex: 1; overflow-y: auto; padding: 8px 0; -webkit-overflow-scrolling: touch; }
 .log-item {
-display: flex; align-items: flex-start; gap: 10px;
-padding: 10px 16px; border-bottom: 1px solid var(–border);
-font-size: 0.8rem;
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: .8rem;
 }
-.log-item:last-child { border-bottom: none; }
 .log-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
 .log-body { flex: 1; min-width: 0; }
 .log-street { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.log-meta { color: var(–muted); font-size: 0.7rem; font-family: ‘DM Mono’, monospace; margin-top: 1px; }
-.log-session { font-size: 0.65rem; color: #cbd5e1; font-family: ‘DM Mono’, monospace; }
+.log-meta   { color: var(--muted); font-size: .7rem; font-family: 'DM Mono', monospace; margin-top: 1px; }
+.log-who    { font-size: .65rem; color: #cbd5e1; font-family: 'DM Mono', monospace; }
+.log-storm-marker {
+  width: 100%; padding: 6px 16px; background: #eff6ff;
+  border-top: 1px solid #bfdbfe; border-bottom: 1px solid #bfdbfe;
+  font-size: .7rem; color: var(--blue); font-family: 'DM Mono', monospace;
+  font-weight: 600; text-align: center;
+}
 .revert-btn {
-background: none; border: 1.5px solid var(–border);
-border-radius: 6px; padding: 4px 9px;
-font-size: 0.7rem; font-weight: 600; color: var(–muted);
-cursor: pointer; flex-shrink: 0; white-space: nowrap;
+  background: none; border: 1.5px solid var(--border); border-radius: 6px;
+  padding: 4px 9px; font-size: .7rem; font-weight: 600; color: var(--muted);
+  cursor: pointer; flex-shrink: 0; white-space: nowrap;
 }
-.revert-btn:active { background: var(–bg); }
-#log-empty {
-text-align: center; padding: 60px 20px;
-color: var(–muted); font-size: 0.85rem;
+#log-empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: .85rem; }
+
+/* Admin panel body */
+#admin-body { flex: 1; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
+#admin-lock { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 12px; padding: 20px; }
+#admin-lock h3 { font-size: 1rem; font-weight: 700; }
+#admin-lock p  { font-size: .82rem; color: var(--muted); text-align: center; }
+.pin-input {
+  width: 140px; padding: 10px; text-align: center; font-size: 1.4rem;
+  letter-spacing: .3em; border: 2px solid var(--border); border-radius: 10px;
+  font-family: 'DM Mono', monospace; outline: none;
+  -webkit-text-security: disc;
 }
+.pin-input:focus { border-color: var(--blue); }
+.btn-primary {
+  background: var(--blue); color: #fff; border: none;
+  border-radius: 10px; padding: 10px 20px;
+  font-size: .85rem; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif;
+}
+.btn-primary:active { filter: brightness(.9); }
+.btn-danger {
+  background: #fff1f2; color: var(--red); border: 1.5px solid #fecdd3;
+  border-radius: 10px; padding: 10px 20px;
+  font-size: .85rem; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif;
+}
+.btn-danger:active { background: #ffe4e6; }
+
+.admin-section { margin-bottom: 24px; }
+.admin-section h3 { font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 10px; font-family: 'DM Mono', monospace; }
+.admin-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.admin-row input[type="datetime-local"] {
+  flex: 1; padding: 9px 10px; border: 1.5px solid var(--border);
+  border-radius: 8px; font-size: .82rem; font-family: 'DM Sans', sans-serif;
+  outline: none; min-width: 0; color: var(--text); background: var(--bg);
+}
+.admin-row input[type="datetime-local"]:focus { border-color: var(--blue); }
+.admin-note { font-size: .75rem; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+.admin-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.admin-pin-change { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.admin-pin-change input {
+  padding: 9px 10px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: .82rem; font-family: 'DM Mono', monospace; outline: none;
+  letter-spacing: .1em; color: var(--text); background: var(--bg);
+}
+.admin-pin-change input:focus { border-color: var(--blue); }
 
 /* ── TOAST ── */
 #toast {
-position: fixed; bottom: 90px; left: 50%;
-transform: translateX(-50%) translateY(8px);
-background: var(–text); color: #fff;
-border-radius: 20px; padding: 7px 16px;
-font-size: 0.78rem; z-index: 3000; white-space: nowrap;
-opacity: 0; pointer-events: none;
-transition: opacity 0.2s, transform 0.2s;
+  position: fixed; bottom: 90px; left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--text); color: #fff;
+  border-radius: 20px; padding: 7px 16px;
+  font-size: .78rem; z-index: 3000; white-space: nowrap;
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s, transform .2s;
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ── GPS MARKER ── */
-.gps-dot {
-width: 16px; height: 16px; background: var(–blue);
-border: 3px solid #fff; border-radius: 50%;
-box-shadow: 0 0 0 4px rgba(37,99,235,0.25);
-}
-
 /* ── POPUP ── */
 .leaflet-popup-content-wrapper {
-background: var(–panel) !important;
-color: var(–text) !important;
-border: 1.5px solid var(–border) !important;
-border-radius: 14px !important;
-box-shadow: var(–shadow-lg) !important;
-padding: 0 !important;
+  background: var(--panel) !important; color: var(--text) !important;
+  border: 1.5px solid var(--border) !important; border-radius: 14px !important;
+  box-shadow: var(--shadow-lg) !important; padding: 0 !important;
 }
 .leaflet-popup-content { margin: 0 !important; }
-.leaflet-popup-tip { background: var(–panel) !important; }
-.leaflet-popup-close-button { color: var(–muted) !important; top: 10px !important; right: 10px !important; font-size: 16px !important; z-index: 1; }
-
+.leaflet-popup-tip { background: var(--panel) !important; }
+.leaflet-popup-close-button { color: var(--muted) !important; top: 10px !important; right: 10px !important; font-size: 16px !important; z-index: 1; }
 .pw { padding: 14px 15px 12px; min-width: 220px; }
-.pw-badge {
-display: inline-flex; align-items: center; gap: 5px;
-font-family: ‘DM Mono’, monospace; font-size: 0.62rem;
-color: var(–muted); background: var(–bg);
-border-radius: 4px; padding: 2px 6px; margin-bottom: 6px;
-}
-.pw-street { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; line-height: 1.25; }
-.pw-status {
-font-size: 0.72rem; text-align: center; border-radius: 6px;
-padding: 5px 8px; margin-bottom: 10px;
-font-family: ‘DM Mono’, monospace; background: var(–bg);
-border: 1px solid var(–border);
-}
-hr.pw-div { border: none; border-top: 1px solid var(–border); margin: 0 -15px 10px; }
+.pw-badge { font-family: 'DM Mono', monospace; font-size: .62rem; color: var(--muted); background: var(--bg); border-radius: 4px; padding: 2px 6px; margin-bottom: 6px; display: inline-block; }
+.pw-street { font-size: .95rem; font-weight: 700; margin-bottom: 8px; line-height: 1.25; }
+.pw-status { font-size: .72rem; text-align: center; border-radius: 6px; padding: 5px 8px; margin-bottom: 3px; font-family: 'DM Mono', monospace; background: var(--bg); border: 1px solid var(--border); }
+.pw-filtered-note { font-size: .68rem; text-align: center; color: var(--blue); margin-bottom: 8px; font-family: 'DM Mono', monospace; }
+hr.pw-div { border: none; border-top: 1px solid var(--border); margin: 8px -15px 10px; }
 .pw-btns { display: flex; flex-direction: column; gap: 5px; }
-.pb {
-width: 100%; padding: 9px; border: none; border-radius: 8px;
-font-size: 0.8rem; font-weight: 700; font-family: ‘DM Sans’, sans-serif;
-cursor: pointer; transition: filter 0.15s, transform 0.1s;
-}
-.pb:active { transform: scale(0.97); }
+.pb { width: 100%; padding: 9px; border: none; border-radius: 8px; font-size: .8rem; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: transform .1s; }
+.pb:active { transform: scale(.97); }
 .pb-clear { background: #d1fae5; color: #065f46; border: 1.5px solid #6ee7b7; }
 .pb-needs { background: #ffe4e6; color: #9f1239; border: 1.5px solid #fda4af; }
-.pb-reset { background: var(–bg); color: var(–muted); border: 1.5px solid var(–border); font-size: 0.72rem; padding: 6px; }
-.pw-user-added { background: #fffbeb; border-top: 1px solid #fde68a; margin: 8px -15px -12px; padding: 7px 15px; border-radius: 0 0 14px 14px; font-size: 0.7rem; color: var(–amber); font-weight: 500; }
-</style>
+.pb-reset { background: var(--bg); color: var(--muted); border: 1.5px solid var(--border); font-size: .72rem; padding: 6px; }
+.pw-added-note { background: #fffbeb; border-top: 1px solid #fde68a; margin: 8px -15px -12px; padding: 7px 15px; border-radius: 0 0 14px 14px; font-size: .7rem; color: var(--amber); font-weight: 500; }
 
+/* GPS dot */
+.gps-dot { width: 16px; height: 16px; background: var(--blue); border: 3px solid #fff; border-radius: 50%; box-shadow: 0 0 0 4px rgba(37,99,235,.25); }
+</style>
 </head>
 <body>
 
 <!-- HEADER -->
-
 <div id="header">
-  <div id="header-icon">❄️🚒</div>
-  <div id="header-title">
+  <div id="hicon">❄️🚒</div>
+  <div id="htitle">
     <h1>East Greenwich Hydrant Rescue</h1>
     <p>Tap any hydrant to update its status</p>
   </div>
@@ -269,34 +342,47 @@ cursor: pointer; transition: filter 0.15s, transform 0.1s;
 </div>
 
 <!-- MAP -->
-
 <div id="map"></div>
 
 <!-- LOADING -->
-
 <div id="loading">
   <span class="spin">❄️</span>
   <p id="load-msg">Loading hydrant locations…</p>
 </div>
 
-<!-- LIVE BADGE -->
-
-<div id="live-badge"><div class="pulse"></div>LIVE</div>
-
-<!-- ADD MODE BANNER -->
-
-<div id="add-banner">📍 Tap anywhere on the map to place a missing hydrant</div>
-
-<!-- CONTROLS -->
-
-<div id="controls">
-  <button class="ctrl-btn" id="gps-btn" onclick="toggleGPS()">📍 My Location</button>
-  <button class="ctrl-btn" id="log-btn" onclick="openLog()">📋 Audit Log</button>
-  <button class="ctrl-btn" id="add-btn" onclick="toggleAddMode()">＋ Add Missing Hydrant</button>
+<!-- STORM TILE -->
+<div id="storm-tile">
+  <div id="storm-header">
+    <div id="storm-icon">🌨️</div>
+    <div id="storm-info">
+      <div id="storm-label">Last storm &gt;6″</div>
+      <div id="storm-date">No storm set</div>
+    </div>
+  </div>
+  <button id="filter-btn" onclick="toggleFilter()">
+    <span class="fb-dot"></span>
+    <span id="filter-label">Show all statuses</span>
+  </button>
 </div>
 
-<!-- LEGEND -->
+<!-- FILTER ACTIVE BANNER -->
+<div id="filter-banner">🔵 Showing only status updates entered since the last storm</div>
 
+<!-- SYNC BADGE -->
+<div id="sync-badge"><div class="pulse"></div><span id="sync-label">LIVE SYNC</span></div>
+
+<!-- ADD BANNER -->
+<div id="add-banner">📍 Tap anywhere on the map to place a missing hydrant</div>
+
+<!-- CONTROLS (bottom-right) -->
+<div id="controls">
+  <button class="ctrl-btn" id="gps-btn"   onclick="toggleGPS()">📍 My Location</button>
+  <button class="ctrl-btn" id="log-btn"   onclick="openPanel('log')">📋 Audit Log</button>
+  <button class="ctrl-btn" id="add-btn"   onclick="toggleAddMode()">＋ Add Missing Hydrant</button>
+  <button class="ctrl-btn" id="admin-btn" onclick="openPanel('admin')">🔑 Admin</button>
+</div>
+
+<!-- LEGEND (bottom-left) -->
 <div id="legend">
   <span class="leg-title">Tap any hydrant</span>
   <div class="leg"><span class="ldot" style="background:var(--gray)"></span>Status unknown</div>
@@ -305,80 +391,154 @@ cursor: pointer; transition: filter 0.15s, transform 0.1s;
   <div class="leg"><span class="ldot" style="background:var(--amber);border:1.5px dashed #d97706"></span>User-added</div>
 </div>
 
-<!-- AUDIT LOG PANEL -->
+<!-- SETUP NOTICE -->
+<div id="setup-notice">
+  <button id="snc" onclick="this.parentElement.style.display='none'">✕</button>
+  <strong>⚠️ Local-only mode.</strong> Changes save to this device only and won't sync to other volunteers.
+  Set up a free Firebase Realtime Database and paste your config into the HTML to enable live sharing.
+  <a href="https://console.firebase.google.com/" target="_blank">console.firebase.google.com →</a>
+</div>
 
-<div id="log-panel">
-  <div id="log-header">
-    <div>
-      <h2>📋 Audit Log</h2>
-      <p>Tap ↩ Revert to undo any change</p>
-    </div>
-    <button id="log-close" onclick="closeLog()">✕</button>
+<!-- AUDIT LOG PANEL -->
+<div id="log-panel" class="slide-panel">
+  <div class="panel-header">
+    <div><h2>📋 Audit Log</h2><p>All status changes — tap ↩ to revert any entry</p></div>
+    <button class="panel-close" onclick="closePanel('log')">✕</button>
   </div>
   <div id="log-list"><div id="log-empty">No changes recorded yet.</div></div>
 </div>
 
-<!-- TOAST -->
+<!-- ADMIN PANEL -->
+<div id="admin-panel" class="slide-panel">
+  <div class="panel-header">
+    <div><h2>🔑 Admin Controls</h2><p>Protected — changes affect all users</p></div>
+    <button class="panel-close" onclick="closePanel('admin')">✕</button>
+  </div>
+  <div id="admin-body">
+    <!-- Lock screen -->
+    <div id="admin-lock">
+      <div style="font-size:2rem">🔒</div>
+      <h3>Admin Access</h3>
+      <p>Enter your admin PIN to access storm date management and bulk reset controls.</p>
+      <input class="pin-input" id="pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="••••" onkeydown="if(event.key==='Enter')checkPin()">
+      <button class="btn-primary" onclick="checkPin()">Unlock</button>
+      <p id="pin-error" style="color:var(--red);font-size:.75rem;display:none">Incorrect PIN</p>
+    </div>
+    <!-- Unlocked controls -->
+    <div id="admin-controls" style="display:none">
 
+      <div class="admin-section">
+        <h3>🌨️ Storm Date</h3>
+        <p class="admin-note" style="margin-bottom:10px">Set the date &amp; time of the last snowstorm greater than 6 inches. This date is shared with all users and controls the post-storm filter.</p>
+        <div class="admin-row">
+          <input type="datetime-local" id="storm-input">
+          <button class="btn-primary" onclick="saveStormDate()">Save Date</button>
+        </div>
+        <p class="admin-note" id="current-storm-note">Current storm date: <strong>None set</strong></p>
+      </div>
+
+      <hr class="admin-divider">
+
+      <div class="admin-section">
+        <h3>🗑️ Bulk Reset All Statuses</h3>
+        <p class="admin-note" style="margin-bottom:10px">Resets every hydrant to "unknown." Use this after setting a new storm date if you want a clean slate. <strong>This cannot be undone.</strong></p>
+        <button class="btn-danger" onclick="confirmBulkReset()">⚠️ Reset All Hydrant Statuses</button>
+      </div>
+
+      <hr class="admin-divider">
+
+      <div class="admin-section">
+        <h3>🔑 Change Admin PIN</h3>
+        <p class="admin-note" style="margin-bottom:8px">Default PIN is <code>1234</code>. Change it here — stored in your browser only.</p>
+        <div class="admin-pin-change">
+          <input type="password" id="new-pin-1" inputmode="numeric" maxlength="6" placeholder="New PIN">
+          <input type="password" id="new-pin-2" inputmode="numeric" maxlength="6" placeholder="Confirm new PIN">
+          <button class="btn-primary" onclick="changePin()">Update PIN</button>
+          <p id="pin-change-msg" style="font-size:.75rem;display:none"></p>
+        </div>
+      </div>
+
+      <hr class="admin-divider">
+      <button class="btn-danger" onclick="lockAdmin()" style="width:100%">🔒 Lock Admin Panel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
 <div id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════════
-//  CONFIG & STATE
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════
 const CENTER  = [41.657, -71.524];
 const ZOOM    = 14;
-const POLL_MS = 12000;
 const EG_BBOX = '41.615,-71.585,41.710,-71.455';
-const OVERPASS_URL = `https://overpass-api.de/api/interpreter?data=` +
-  encodeURIComponent(`[out:json][timeout:30];node["emergency"="fire_hydrant"](${EG_BBOX});out;`);
+const OVERPASS_SERVERS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+];
+const OVERPASS_QUERY = `[out:json][timeout:30];node["emergency"="fire_hydrant"](${EG_BBOX});out;`;
 
-const STORE_STATUS  = 'eg-hydrant-status-v3';
-const STORE_AUDIT   = 'eg-hydrant-audit-v3';
-const STORE_CUSTOM  = 'eg-hydrant-custom-v3';
-
-// Generate a stable session ID for this browser session
 const SESSION_ID = (() => {
-  let id = sessionStorage.getItem('eg-session');
-  if (!id) { id = 'user-' + Math.random().toString(36).slice(2,7); sessionStorage.setItem('eg-session', id); }
+  let id = sessionStorage.getItem('eg-sid');
+  if (!id) { id = 'u-' + Math.random().toString(36).slice(2,7); sessionStorage.setItem('eg-sid', id); }
   return id;
 })();
 
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
 let markers   = {};   // id → L.circleMarker
 let hydrants  = {};   // id → {lat, lon, label, userAdded}
 let statuses  = {};   // id → 'unknown'|'needs'|'clear'
+let statusTs  = {};   // id → timestamp of the most recent status change
 let auditLog  = [];   // [{id, label, oldStatus, newStatus, ts, session}]
 let customH   = [];   // [{id, lat, lon, label}]
+let stormDate = null; // timestamp (ms) of last storm >6" — synced via Firebase
+let filterActive = false;  // local per-user, not synced
+let addMode   = false;
+let gpsActive = false, gpsMarker = null, gpsWatch = null;
+let usingFirebase = false;
 
-let addMode     = false;
-let gpsActive   = false;
-let gpsMarker   = null;
-let gpsWatch    = null;
-
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 //  MAP
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 const map = L.map('map', { zoomControl: false, tap: true }).setView(CENTER, ZOOM);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-// Light CartoDB Positron basemap
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a> | Hydrant data: OSM & RIGIS',
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a>',
   subdomains: 'abcd', maxZoom: 20
 }).addTo(map);
-
-// Tap-to-add handler
-map.on('click', function(e) {
+map.on('click', e => {
   if (!addMode) return;
-  const label = prompt('Street name or description for this hydrant (optional):') ?? 'User-added hydrant';
-  if (label === null) return; // cancelled
+  const label = prompt('Street name or description (optional):');
+  if (label === null) return;
   addCustomHydrant(e.latlng.lat, e.latlng.lng, label.trim() || 'User-added hydrant');
   toggleAddMode();
 });
 
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  EFFECTIVE STATUS — the heart of the storm filter
+//  Returns what color to SHOW, not what's stored.
+//  When filter is ON, only counts status changes AFTER stormDate.
+// ═══════════════════════════════════════════════════════
+function effectiveStatus(id) {
+  if (!filterActive || !stormDate) return statuses[id] || 'unknown';
+  // Walk audit log for this hydrant, find most recent entry after storm
+  for (const entry of auditLog) {
+    if (entry.id === id && entry.ts > stormDate && entry.newStatus !== 'added') {
+      return entry.newStatus;
+    }
+  }
+  // Nothing after storm date → treat as unknown
+  return 'unknown';
+}
+
+// ═══════════════════════════════════════════════════════
 //  UI HELPERS
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 function toast(msg, dur = 2600) {
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -388,360 +548,475 @@ function toast(msg, dur = 2600) {
 function setLoading(msg) {
   const el = document.getElementById('loading');
   if (msg) { el.style.display='flex'; document.getElementById('load-msg').textContent=msg; }
-  else { el.style.display='none'; }
+  else      { el.style.display='none'; }
 }
-function colorOf(s, userAdded) {
-  if (userAdded && (!s || s === 'unknown')) return '#d97706';
-  return s === 'clear' ? '#059669' : s === 'needs' ? '#e11d48' : '#94a3b8';
+function colorOf(effStatus, userAdded) {
+  if (userAdded && effStatus === 'unknown') return '#d97706';
+  return effStatus === 'clear' ? '#059669' : effStatus === 'needs' ? '#e11d48' : '#94a3b8';
 }
 function labelOf(s) {
   return s==='clear' ? '✅ CLEARED — ready for fire use'
        : s==='needs' ? '⚠️ NEEDS DIGGING OUT'
        : '❓ Status unknown — tap to update';
 }
-function updateStats() {
-  const ids = Object.keys(hydrants);
-  document.getElementById('cnt-clear').textContent = ids.filter(i=>statuses[i]==='clear').length;
-  document.getElementById('cnt-needs').textContent = ids.filter(i=>statuses[i]==='needs').length;
-  document.getElementById('cnt-unk').textContent   = ids.filter(i=>!statuses[i]||statuses[i]==='unknown').length;
+function fmtDate(ts) {
+  return new Date(ts).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
 }
-function fmtTime(ts) {
+function fmtDateTime(ts) {
   const d = new Date(ts);
   return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' +
          d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
 }
+function updateStats() {
+  const ids = Object.keys(hydrants);
+  document.getElementById('cnt-clear').textContent = ids.filter(i => effectiveStatus(i)==='clear').length;
+  document.getElementById('cnt-needs').textContent = ids.filter(i => effectiveStatus(i)==='needs').length;
+  document.getElementById('cnt-unk').textContent   = ids.filter(i => effectiveStatus(i)==='unknown').length;
+}
+function refreshAllMarkers() {
+  for (const id of Object.keys(hydrants)) applyMarkerStyle(id);
+  updateStats();
+}
 
-// ═══════════════════════════════════════════════════════════
-//  STORAGE
-// ═══════════════════════════════════════════════════════════
-async function save() {
-  try {
-    await window.storage.set(STORE_STATUS, JSON.stringify(statuses), true);
-    await window.storage.set(STORE_AUDIT,  JSON.stringify(auditLog.slice(-200)), true); // keep last 200
-    await window.storage.set(STORE_CUSTOM, JSON.stringify(customH), true);
-  } catch(e) {}
-}
-async function loadAll() {
-  try {
-    const s = await window.storage.get(STORE_STATUS, true);
-    if (s?.value) Object.assign(statuses, JSON.parse(s.value));
-  } catch(e) {}
-  try {
-    const a = await window.storage.get(STORE_AUDIT, true);
-    if (a?.value) auditLog = JSON.parse(a.value);
-  } catch(e) {}
-  try {
-    const c = await window.storage.get(STORE_CUSTOM, true);
-    if (c?.value) customH = JSON.parse(c.value);
-  } catch(e) {}
-}
-async function syncRemote() {
-  try {
-    const s = await window.storage.get(STORE_STATUS, true);
-    if (!s?.value) return;
-    const remote = JSON.parse(s.value);
-    let changed = 0;
-    for (const [id, st] of Object.entries(remote)) {
-      if (statuses[id] !== st) { applyStatus(id, st, false); changed++; }
+// ═══════════════════════════════════════════════════════
+//  STORM TILE UI
+// ═══════════════════════════════════════════════════════
+function updateStormTile() {
+  const dateEl  = document.getElementById('storm-date');
+  const noteEl  = document.getElementById('current-storm-note');
+  if (stormDate) {
+    dateEl.textContent = fmtDate(stormDate);
+    if (noteEl) noteEl.innerHTML = `Current storm date: <strong>${fmtDate(stormDate)}</strong>`;
+    // Pre-fill the admin datetime input if it exists
+    const inp = document.getElementById('storm-input');
+    if (inp) {
+      const d = new Date(stormDate);
+      // datetime-local needs format: YYYY-MM-DDTHH:MM
+      inp.value = d.toISOString().slice(0,16);
     }
+  } else {
+    dateEl.textContent = 'No storm set';
+    if (noteEl) noteEl.innerHTML = 'Current storm date: <strong>None set</strong>';
+  }
+}
 
-    const c = await window.storage.get(STORE_CUSTOM, true);
-    if (c?.value) {
-      const remoteCustom = JSON.parse(c.value);
-      for (const h of remoteCustom) {
-        if (!hydrants[h.id]) { renderHydrant(h.id, h.lat, h.lon, h.label, true); changed++; }
+function toggleFilter() {
+  if (!stormDate) { toast('⚠️ No storm date set — ask admin to set one first'); return; }
+  filterActive = !filterActive;
+  const btn   = document.getElementById('filter-btn');
+  const lbl   = document.getElementById('filter-label');
+  const banner= document.getElementById('filter-banner');
+  if (filterActive) {
+    btn.classList.add('active');
+    lbl.textContent = 'Since storm only';
+    banner.style.display = 'block';
+    toast(`🔵 Showing updates since ${fmtDate(stormDate)}`);
+  } else {
+    btn.classList.remove('active');
+    lbl.textContent = 'Show all statuses';
+    banner.style.display = 'none';
+    toast('Showing all status history');
+  }
+  refreshAllMarkers();
+}
+
+// ═══════════════════════════════════════════════════════
+//  STORAGE — Firebase or localStorage
+// ═══════════════════════════════════════════════════════
+async function initStorage() {
+  await new Promise(r => setTimeout(r, 700)); // wait for module import
+
+  if (window._firebaseReady) {
+    usingFirebase = true;
+    const fb = window._fb;
+
+    // Load snapshot
+    try {
+      const snap = await fb.get(fb.ref(fb.db, 'hydrantmap'));
+      const d = snap.val() || {};
+      statuses  = d.statuses  || {};
+      statusTs  = d.statusTs  || {};
+      auditLog  = d.audit     || [];
+      customH   = d.custom    || [];
+      stormDate = d.stormDate || null;
+    } catch(e) { console.warn('Firebase read:', e); }
+
+    // Live subscription — updates from other users
+    fb.onValue(fb.ref(fb.db, 'hydrantmap'), snap => {
+      const d = snap.val() || {};
+      let changed = 0;
+
+      // Statuses
+      const rs = d.statuses || {};
+      for (const [id, st] of Object.entries(rs)) {
+        if (statuses[id] !== st) { statuses[id] = st; changed++; }
       }
-    }
+      statusTs = d.statusTs || statusTs;
+      auditLog = d.audit    || auditLog;
 
-    if (changed) { updateStats(); toast(`🔄 ${changed} update(s) from other volunteers`); }
-  } catch(e) {}
+      // Storm date changed by admin
+      const remoteStorm = d.stormDate || null;
+      if (remoteStorm !== stormDate) {
+        stormDate = remoteStorm;
+        updateStormTile();
+        if (filterActive) refreshAllMarkers(); // re-evaluate filter
+        changed++;
+      }
+
+      // New custom hydrants
+      const rc = d.custom || [];
+      for (const h of rc) {
+        if (!hydrants[h.id]) { renderHydrant(h.id, h.lat, h.lon, h.label, true); customH.push(h); changed++; }
+      }
+
+      if (changed) { refreshAllMarkers(); toast(`🔄 ${changed} update(s) from others`); }
+    });
+
+    document.getElementById('sync-badge').style.display = 'flex';
+    document.getElementById('sync-label').textContent   = 'LIVE SYNC';
+  } else {
+    usingFirebase = false;
+    try { statuses  = JSON.parse(localStorage.getItem('eg-statuses')  || '{}'); } catch(e) {}
+    try { statusTs  = JSON.parse(localStorage.getItem('eg-statusTs')  || '{}'); } catch(e) {}
+    try { auditLog  = JSON.parse(localStorage.getItem('eg-audit')     || '[]'); } catch(e) {}
+    try { customH   = JSON.parse(localStorage.getItem('eg-custom')    || '[]'); } catch(e) {}
+    try { stormDate = JSON.parse(localStorage.getItem('eg-stormdate') || 'null'); } catch(e) {}
+
+    const badge = document.getElementById('sync-badge');
+    badge.style.display = 'flex'; badge.classList.add('local');
+    document.getElementById('sync-label').textContent = 'LOCAL ONLY';
+    document.getElementById('setup-notice').style.display = 'block';
+  }
 }
 
-// ═══════════════════════════════════════════════════════════
+async function saveAll() {
+  if (usingFirebase) {
+    try {
+      await window._fb.update(window._fb.ref(window._fb.db, 'hydrantmap'), {
+        statuses, statusTs, audit: auditLog.slice(0,300), custom: customH, stormDate
+      });
+    } catch(e) { console.warn('Firebase write:', e); }
+  } else {
+    localStorage.setItem('eg-statuses',  JSON.stringify(statuses));
+    localStorage.setItem('eg-statusTs',  JSON.stringify(statusTs));
+    localStorage.setItem('eg-audit',     JSON.stringify(auditLog.slice(0,300)));
+    localStorage.setItem('eg-custom',    JSON.stringify(customH));
+    localStorage.setItem('eg-stormdate', JSON.stringify(stormDate));
+  }
+}
+
+// ═══════════════════════════════════════════════════════
 //  MARKERS
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 function renderHydrant(id, lat, lon, label, userAdded = false) {
   hydrants[id] = { lat, lon, label, userAdded };
-  const st    = statuses[id] || 'unknown';
-  const color = colorOf(st, userAdded);
-
+  const eff   = effectiveStatus(id);
+  const color = colorOf(eff, userAdded);
   const m = L.circleMarker([lat, lon], {
-    radius: 7, color, fillColor: color, fillOpacity: 0.88,
-    weight: userAdded ? 2.5 : 2,
-    dashArray: userAdded ? '4,3' : null
+    radius: 7, color, fillColor: color, fillOpacity: .88,
+    weight: 2, dashArray: userAdded ? '4,3' : null
   }).addTo(map);
-
   markers[id] = m;
   m.bindPopup(() => makePopup(id), { maxWidth: 260 });
 }
 
 function makePopup(id) {
-  const h  = hydrants[id];
-  const st = statuses[id] || 'unknown';
+  const h   = hydrants[id];
+  const eff = effectiveStatus(id);
+  const raw = statuses[id] || 'unknown';
+  const isFiltered = filterActive && stormDate && eff !== raw;
   const div = document.createElement('div');
   div.className = 'pw';
   div.innerHTML = `
-    <div class="pw-badge">
-      ${h.userAdded ? '🟡 USER-ADDED' : '🔵 OSM #' + String(id).slice(-6)}
-    </div>
+    <div class="pw-badge">${h.userAdded ? '🟡 USER-ADDED' : '🔵 OSM #' + String(id).slice(-6)}</div>
     <div class="pw-street">${h.label}</div>
-    <div class="pw-status" id="slbl-${id}">${labelOf(st)}</div>
+    <div class="pw-status" id="slbl-${id}">${labelOf(eff)}</div>
+    ${isFiltered ? `<div class="pw-filtered-note">🔵 Stored status: ${raw} — no update since storm</div>` : ''}
     <hr class="pw-div">
     <div class="pw-btns">
       <button class="pb pb-clear" onclick="window.setStatus('${id}','clear')">✅ Mark CLEARED</button>
       <button class="pb pb-needs" onclick="window.setStatus('${id}','needs')">⚠️ Mark NEEDS DIGGING</button>
       <button class="pb pb-reset" onclick="window.setStatus('${id}','unknown')">↩ Reset to Unknown</button>
     </div>
-    ${h.userAdded ? '<div class="pw-user-added">📍 Added by a volunteer — not in official database</div>' : ''}
+    ${h.userAdded ? '<div class="pw-added-note">📍 Added by a volunteer — not in official database</div>' : ''}
   `;
   return div;
 }
 
-function applyStatus(id, st, animate = false) {
-  statuses[id] = st;
+function applyMarkerStyle(id) {
   const m = markers[id];
   if (!m) return;
-  const h = hydrants[id];
-  const c = colorOf(st, h?.userAdded);
+  const eff = effectiveStatus(id);
+  const c   = colorOf(eff, hydrants[id]?.userAdded);
   m.setStyle({ color: c, fillColor: c });
-  if (animate) { m.setRadius(11); setTimeout(() => m.setRadius(7), 220); }
   const lbl = document.getElementById('slbl-' + id);
-  if (lbl) lbl.textContent = labelOf(st);
+  if (lbl) lbl.textContent = labelOf(eff);
+}
+function mAnimate(id) {
+  const m = markers[id];
+  if (!m) return;
+  m.setRadius(11); setTimeout(() => m.setRadius(7), 220);
 }
 
-// ═══════════════════════════════════════════════════════════
-//  STATUS UPDATE WITH AUDIT
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  STATUS UPDATE + AUDIT
+// ═══════════════════════════════════════════════════════
 window.setStatus = async (id, newSt) => {
   const oldSt = statuses[id] || 'unknown';
   if (oldSt === newSt) { map.closePopup(); return; }
-
-  // Record audit entry
-  auditLog.unshift({
-    id, label: hydrants[id]?.label || id,
-    oldStatus: oldSt, newStatus: newSt,
-    ts: Date.now(), session: SESSION_ID
-  });
-
-  applyStatus(id, newSt, true);
+  const ts = Date.now();
+  auditLog.unshift({ id, label: hydrants[id]?.label || id, oldStatus: oldSt, newStatus: newSt, ts, session: SESSION_ID });
+  statuses[id] = newSt;
+  statusTs[id] = ts;
+  applyMarkerStyle(id);
+  mAnimate(id);
   updateStats();
-  await save();
+  await saveAll();
   map.closePopup();
-
-  const msgs = { clear:'✅ Marked cleared!', needs:'⚠️ Needs digging — logged', unknown:'↩ Status reset' };
-  toast(msgs[newSt] || 'Updated');
-
-  // Refresh log if open
+  toast({ clear:'✅ Marked cleared!', needs:'⚠️ Needs digging — logged', unknown:'↩ Status reset' }[newSt] || 'Updated');
   if (document.getElementById('log-panel').classList.contains('open')) renderLog();
 };
 
-// ═══════════════════════════════════════════════════════════
-//  AUDIT LOG UI
-// ═══════════════════════════════════════════════════════════
-function openLog() {
-  renderLog();
-  const panel = document.getElementById('log-panel');
+// ═══════════════════════════════════════════════════════
+//  ADD HYDRANT
+// ═══════════════════════════════════════════════════════
+function toggleAddMode() {
+  addMode = !addMode;
+  const btn = document.getElementById('add-btn');
+  const banner = document.getElementById('add-banner');
+  if (addMode) {
+    btn.textContent = '✕ Cancel Adding'; btn.classList.add('cancel');
+    banner.style.display = 'block'; map.getContainer().style.cursor = 'crosshair';
+  } else {
+    btn.innerHTML = '＋ Add Missing Hydrant'; btn.classList.remove('cancel');
+    banner.style.display = 'none'; map.getContainer().style.cursor = '';
+  }
+}
+async function addCustomHydrant(lat, lon, label) {
+  const id = 'custom-' + Date.now();
+  customH.push({ id, lat, lon, label });
+  renderHydrant(id, lat, lon, label, true);
+  auditLog.unshift({ id, label, oldStatus: null, newStatus: 'added', ts: Date.now(), session: SESSION_ID });
+  updateStats();
+  await saveAll();
+  toast(`📍 Hydrant added: ${label}`);
+  setTimeout(() => markers[id]?.openPopup(), 300);
+}
+
+// ═══════════════════════════════════════════════════════
+//  SLIDE PANELS
+// ═══════════════════════════════════════════════════════
+function openPanel(name) {
+  if (name === 'log')   renderLog();
+  if (name === 'admin') resetAdminLock();
+  const panel = document.getElementById(name + '-panel');
   panel.style.display = 'flex';
   requestAnimationFrame(() => panel.classList.add('open'));
 }
-function closeLog() {
-  const panel = document.getElementById('log-panel');
+function closePanel(name) {
+  const panel = document.getElementById(name + '-panel');
   panel.classList.remove('open');
-  setTimeout(() => { panel.style.display='none'; }, 310);
+  setTimeout(() => { panel.style.display = 'none'; }, 310);
 }
 
+// ═══════════════════════════════════════════════════════
+//  AUDIT LOG RENDER
+// ═══════════════════════════════════════════════════════
 function renderLog() {
   const list = document.getElementById('log-list');
-  if (auditLog.length === 0) {
-    list.innerHTML = '<div id="log-empty">No changes recorded yet.</div>';
-    return;
-  }
-  list.innerHTML = auditLog.map((entry, idx) => {
-    const stColor = entry.newStatus === 'clear' ? '#059669' : entry.newStatus === 'needs' ? '#e11d48' : '#94a3b8';
-    const stLabel = entry.newStatus === 'clear' ? 'Cleared' : entry.newStatus === 'needs' ? 'Needs digging' : 'Reset';
-    const isMe    = entry.session === SESSION_ID;
-    return `
+  if (!auditLog.length) { list.innerHTML = '<div id="log-empty">No changes recorded yet.</div>'; return; }
+  const sc = { clear:'#059669', needs:'#e11d48', unknown:'#94a3b8', added:'#d97706' };
+  const sl = { clear:'Cleared', needs:'Needs digging', unknown:'Reset', added:'Hydrant added' };
+
+  let stormInserted = false;
+  list.innerHTML = auditLog.map((e, idx) => {
+    let stormMarker = '';
+    if (stormDate && !stormInserted && e.ts < stormDate) {
+      stormInserted = true;
+      stormMarker = `<div class="log-storm-marker">🌨️ Storm: ${fmtDate(stormDate)} — entries below this line predate the storm</div>`;
+    }
+    return `${stormMarker}
       <div class="log-item">
-        <span class="log-dot" style="background:${stColor}"></span>
+        <span class="log-dot" style="background:${sc[e.newStatus]||'#94a3b8'}"></span>
         <div class="log-body">
-          <div class="log-street">${entry.label}</div>
-          <div class="log-meta">${stLabel} &nbsp;·&nbsp; ${fmtTime(entry.ts)}</div>
-          <div class="log-session">${isMe ? '👤 You' : entry.session}</div>
+          <div class="log-street">${e.label}</div>
+          <div class="log-meta">${sl[e.newStatus]||e.newStatus} · ${fmtDateTime(e.ts)}</div>
+          <div class="log-who">${e.session===SESSION_ID?'👤 You':e.session}${e.isRevert?' · ↩ revert':''}</div>
         </div>
-        <button class="revert-btn" onclick="revertEntry(${idx})">↩ Revert</button>
+        ${e.newStatus!=='added'?`<button class="revert-btn" onclick="revertEntry(${idx})">↩</button>`:''}
       </div>`;
   }).join('');
 }
 
 window.revertEntry = async (idx) => {
-  const entry = auditLog[idx];
-  if (!entry) return;
-
-  // Add a new audit entry for the revert
-  auditLog.unshift({
-    id: entry.id, label: entry.label,
-    oldStatus: entry.newStatus, newStatus: entry.oldStatus,
-    ts: Date.now(), session: SESSION_ID,
-    isRevert: true
-  });
-
-  // Remove the original entry
-  auditLog.splice(idx + 1, 1);
-
-  applyStatus(entry.id, entry.oldStatus, true);
-  updateStats();
-  await save();
-  renderLog();
-  toast(`↩ Reverted: ${entry.label}`);
+  const e = auditLog[idx];
+  if (!e) return;
+  auditLog.unshift({ id:e.id, label:e.label, oldStatus:e.newStatus, newStatus:e.oldStatus, ts:Date.now(), session:SESSION_ID, isRevert:true });
+  auditLog.splice(idx+1, 1);
+  statuses[e.id] = e.oldStatus;
+  applyMarkerStyle(e.id); mAnimate(e.id);
+  updateStats(); await saveAll(); renderLog();
+  toast(`↩ Reverted: ${e.label}`);
 };
 
-// ═══════════════════════════════════════════════════════════
-//  ADD MISSING HYDRANT
-// ═══════════════════════════════════════════════════════════
-function toggleAddMode() {
-  addMode = !addMode;
-  const btn    = document.getElementById('add-btn');
-  const banner = document.getElementById('add-banner');
-  if (addMode) {
-    btn.textContent = '✕ Cancel Adding';
-    btn.classList.add('cancel');
-    banner.style.display = 'block';
-    map.getContainer().style.cursor = 'crosshair';
+// ═══════════════════════════════════════════════════════
+//  ADMIN
+// ═══════════════════════════════════════════════════════
+function getPin() { return localStorage.getItem('eg-admin-pin') || '1234'; }
+function resetAdminLock() {
+  document.getElementById('admin-lock').style.display     = 'flex';
+  document.getElementById('admin-controls').style.display = 'none';
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-error').style.display = 'none';
+  updateStormTile(); // keep admin inputs in sync
+}
+function checkPin() {
+  const entered = document.getElementById('pin-input').value;
+  if (entered === getPin()) {
+    document.getElementById('admin-lock').style.display     = 'none';
+    document.getElementById('admin-controls').style.display = 'block';
+    updateStormTile();
   } else {
-    btn.innerHTML = '＋ Add Missing Hydrant';
-    btn.classList.remove('cancel');
-    banner.style.display = 'none';
-    map.getContainer().style.cursor = '';
+    document.getElementById('pin-error').style.display = 'block';
+    document.getElementById('pin-input').value = '';
   }
 }
-
-async function addCustomHydrant(lat, lon, label) {
-  const id = 'custom-' + Date.now();
-  customH.push({ id, lat, lon, label });
-  renderHydrant(id, lat, lon, label, true);
-  updateStats();
-
-  auditLog.unshift({
-    id, label,
-    oldStatus: null, newStatus: 'added',
-    ts: Date.now(), session: SESSION_ID
-  });
-
-  await save();
-  toast(`📍 Hydrant added: ${label}`);
-
-  // Open its popup
-  setTimeout(() => markers[id]?.openPopup(), 300);
+function lockAdmin() {
+  document.getElementById('admin-lock').style.display     = 'flex';
+  document.getElementById('admin-controls').style.display = 'none';
+  document.getElementById('pin-input').value = '';
 }
 
-// ═══════════════════════════════════════════════════════════
-//  GPS / MY LOCATION
-// ═══════════════════════════════════════════════════════════
-function toggleGPS() {
-  if (gpsActive) {
-    stopGPS();
-  } else {
-    startGPS();
+async function saveStormDate() {
+  const inp = document.getElementById('storm-input').value;
+  if (!inp) { toast('⚠️ Pick a date first'); return; }
+  stormDate = new Date(inp).getTime();
+  updateStormTile();
+  await saveAll();
+  refreshAllMarkers();
+  toast(`🌨️ Storm date saved: ${fmtDate(stormDate)}`);
+}
+
+async function confirmBulkReset() {
+  const ok = confirm(`Reset ALL ${Object.keys(hydrants).length} hydrant statuses to "unknown"?\n\nThis cannot be undone.`);
+  if (!ok) return;
+  const ts = Date.now();
+  for (const id of Object.keys(statuses)) {
+    if (statuses[id] && statuses[id] !== 'unknown') {
+      auditLog.unshift({ id, label: hydrants[id]?.label||id, oldStatus: statuses[id], newStatus:'unknown', ts, session: SESSION_ID + ' (bulk-reset)', isRevert:false });
+    }
+    statuses[id] = 'unknown';
+    statusTs[id] = ts;
   }
+  await saveAll();
+  refreshAllMarkers();
+  toast(`↩ All ${Object.keys(hydrants).length} hydrants reset to unknown`);
+  if (document.getElementById('log-panel').classList.contains('open')) renderLog();
 }
 
+function changePin() {
+  const p1 = document.getElementById('new-pin-1').value;
+  const p2 = document.getElementById('new-pin-2').value;
+  const msg = document.getElementById('pin-change-msg');
+  if (!p1 || p1.length < 4) { msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent='PIN must be at least 4 digits.'; return; }
+  if (p1 !== p2) { msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent='PINs do not match.'; return; }
+  localStorage.setItem('eg-admin-pin', p1);
+  document.getElementById('new-pin-1').value = '';
+  document.getElementById('new-pin-2').value = '';
+  msg.style.display='block'; msg.style.color='var(--green)'; msg.textContent='✅ PIN updated!';
+  setTimeout(() => { msg.style.display='none'; }, 3000);
+}
+
+// ═══════════════════════════════════════════════════════
+//  GPS
+// ═══════════════════════════════════════════════════════
+function toggleGPS() { gpsActive ? stopGPS() : startGPS(); }
 function startGPS() {
-  if (!navigator.geolocation) { toast('📍 GPS not available on this device'); return; }
+  if (!navigator.geolocation) { toast('GPS not available'); return; }
   toast('📍 Getting your location…');
   gpsWatch = navigator.geolocation.watchPosition(
     pos => {
       const { latitude: lat, longitude: lon } = pos.coords;
-
       if (!gpsMarker) {
         gpsMarker = L.marker([lat, lon], {
-          icon: L.divIcon({ className: '', html: '<div class="gps-dot"></div>', iconSize:[16,16], iconAnchor:[8,8] }),
+          icon: L.divIcon({ className:'', html:'<div class="gps-dot"></div>', iconSize:[16,16], iconAnchor:[8,8] }),
           zIndexOffset: 1000
         }).addTo(map).bindPopup('📍 <strong>Your Location</strong>');
-      } else {
-        gpsMarker.setLatLng([lat, lon]);
-      }
-
+      } else { gpsMarker.setLatLng([lat, lon]); }
       map.setView([lat, lon], Math.max(map.getZoom(), 16));
       gpsActive = true;
-      document.getElementById('gps-btn').classList.add('active');
-      document.getElementById('gps-btn').textContent = '📍 Following You';
+      const btn = document.getElementById('gps-btn');
+      btn.classList.add('active'); btn.textContent = '📍 Following You';
     },
     err => {
-      const msgs = {1:'Location permission denied',2:'Position unavailable',3:'Location request timed out'};
-      toast('⚠️ ' + (msgs[err.code] || 'GPS error'));
+      toast(['','Location access denied','Position unavailable','GPS timed out'][err.code]||'GPS error');
       stopGPS();
     },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 4000 }
   );
 }
-
 function stopGPS() {
   if (gpsWatch !== null) { navigator.geolocation.clearWatch(gpsWatch); gpsWatch = null; }
   if (gpsMarker) { map.removeLayer(gpsMarker); gpsMarker = null; }
   gpsActive = false;
   const btn = document.getElementById('gps-btn');
-  btn.classList.remove('active');
-  btn.textContent = '📍 My Location';
+  btn.classList.remove('active'); btn.textContent = '📍 My Location';
 }
 
-// ═══════════════════════════════════════════════════════════
-//  DATA LOADING
-// ═══════════════════════════════════════════════════════════
-function showMapUI() {
-  setLoading(false);
-  document.getElementById('live-badge').style.display = 'flex';
-  document.getElementById('controls').style.display   = 'flex';
-  document.getElementById('legend').style.display     = 'block';
-  updateStats();
-  setInterval(syncRemote, POLL_MS);
+// ═══════════════════════════════════════════════════════
+//  OVERPASS FETCH
+// ═══════════════════════════════════════════════════════
+async function fetchOverpass() {
+  let lastErr;
+  for (const server of OVERPASS_SERVERS) {
+    try {
+      setLoading('Loading hydrant locations…');
+      const url = `${server}?data=${encodeURIComponent(OVERPASS_QUERY)}`;
+      const res  = await fetch(url, { signal: AbortSignal.timeout(20000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const nodes = (data.elements || []).filter(e => e.type === 'node');
+      if (!nodes.length) throw new Error('No hydrants returned');
+      return nodes;
+    } catch(e) { lastErr = e; }
+  }
+  throw lastErr;
 }
 
-async function loadOverpass() {
-  setLoading('Loading hydrant locations from OpenStreetMap…');
-  const res  = await fetch(OVERPASS_URL);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  const nodes = (data.elements || []).filter(e => e.type === 'node');
-  if (!nodes.length) throw new Error('No hydrants found in area');
-  return nodes;
-}
-
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 //  BOOT
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 (async () => {
-  await loadAll();
+  await initStorage();
 
   let osmCount = 0;
   try {
-    const nodes = await loadOverpass();
+    const nodes = await fetchOverpass();
     osmCount = nodes.length;
     nodes.forEach(n => {
       const t = n.tags || {};
       const label = [t['addr:housenumber'], t['addr:street'] || t.name].filter(Boolean).join(' ') || 'Fire Hydrant';
       renderHydrant(String(n.id), n.lat, n.lon, label, false);
     });
-    toast(`Loaded ${osmCount} hydrants`);
   } catch(e) {
-    // Minimal demo fallback — no error screen, silent
-    const pts = [
-      [41.6597,-71.5283,'Main St & Division'],[41.6605,-71.5270,'Main St'],[41.6614,-71.5253,'Main St & London'],
-      [41.6578,-71.5246,'Division St'],[41.6590,-71.5230,'Division St'],[41.6568,-71.5214,'King St'],
-      [41.6557,-71.5229,'King St'],[41.6620,-71.5178,'London St'],[41.6634,-71.5162,'London St'],
-      [41.6661,-71.5200,'Frenchtown Rd'],[41.6675,-71.5225,'Frenchtown Rd'],[41.6499,-71.5315,'Forge Rd'],
-    ];
-    pts.forEach(([lat,lon,lbl],i) => renderHydrant(`DEMO-${i}`,lat,lon,lbl,false));
-    toast('⚠️ Using demo data — check network connection');
+    console.warn('Overpass failed:', e);
+    setLoading('⚠️ Network issue loading hydrant data. Check connection and refresh.');
+    await new Promise(r => setTimeout(r, 3000));
   }
 
-  // Restore any user-added hydrants
   for (const h of customH) {
     if (!hydrants[h.id]) renderHydrant(h.id, h.lat, h.lon, h.label, true);
   }
 
-  showMapUI();
+  setLoading(false);
+  document.getElementById('controls').style.display  = 'flex';
+  document.getElementById('legend').style.display    = 'block';
+  document.getElementById('storm-tile').style.display = 'flex';
+  updateStormTile();
+  updateStats();
+
+  if (osmCount > 0) toast(`Loaded ${osmCount} hydrants`);
 })();
 </script>
-
 </body>
 </html>
