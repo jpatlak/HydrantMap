@@ -618,7 +618,11 @@ function toggleFilter() {
 //  STORAGE — Firebase or localStorage
 // ═══════════════════════════════════════════════════════
 async function initStorage() {
-  await new Promise(r => setTimeout(r, 700)); // wait for module import
+  // Poll up to 5 seconds for the Firebase ES module to finish importing
+  for (let i = 0; i < 50; i++) {
+    if (window._firebaseReady !== undefined) break;
+    await new Promise(r => setTimeout(r, 100));
+  }
 
   if (window._firebaseReady) {
     usingFirebase = true;
@@ -856,7 +860,7 @@ window.revertEntry = async (idx) => {
 // ═══════════════════════════════════════════════════════
 //  ADMIN
 // ═══════════════════════════════════════════════════════
-function getPin() { return localStorage.getItem('eg-admin-pin') || '1234'; }
+function getPin() { return localStorage.getItem('eg-admin-pin') || '472018'; }
 function resetAdminLock() {
   document.getElementById('admin-lock').style.display     = 'flex';
   document.getElementById('admin-controls').style.display = 'none';
@@ -943,7 +947,12 @@ function startGPS() {
       btn.classList.add('active'); btn.textContent = '📍 Following You';
     },
     err => {
-      toast(['','Location access denied','Position unavailable','GPS timed out'][err.code]||'GPS error');
+      const msgs = {
+        1: 'Location access denied. On iPhone: Settings → Privacy & Security → Location Services → Safari → set to "While Using App"',
+        2: 'Position unavailable — try moving outside',
+        3: 'GPS timed out — try again'
+      };
+      toast(msgs[err.code] || 'GPS error', 5000);
       stopGPS();
     },
     { enableHighAccuracy: true, timeout: 12000, maximumAge: 4000 }
